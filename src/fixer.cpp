@@ -48,22 +48,20 @@ bool read_opts()
 
 
 double fix(double value)
-{
-	// read_opts();
-	adj_opts.read = false;
-	
-	if (value > adj_opts.fix_upper_thr || value < adj_opts.fix_lower_thr)
-	{
-		value += adj_opts.adj_value;
-	}
-	else if (adj_opts.urb>= value && value <= adj_opts.lrb)
+{	
+	if (adj_opts.urb >= value && value <= adj_opts.lrb)
 	{
 		if (!adj_opts.read)
 			adj_opts.read = read_opts();
-		else
-			adj_opts.read = true; // we've read data last time and still within reading bounds
 	}
-
+	else
+	{
+		if (value > adj_opts.fix_upper_thr || value < adj_opts.fix_lower_thr)
+		{
+			value += adj_opts.adj_value;
+		}
+		adj_opts.read = false;
+	}
 	return value;
 }
 
