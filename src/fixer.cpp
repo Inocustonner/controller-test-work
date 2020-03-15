@@ -42,15 +42,29 @@ bool read_opts()
 		printf("adj value option is unspecified\n");
 		return false;
 	}
-	printf("%lf\n", adj_opts.adj_value);
+	// printf("%lf\n", adj_opts.adj_value);
 	return true;
 }
 
 
 double fix(double value)
 {
-	read_opts();
-	return adj_opts.adj_value;
+	// read_opts();
+	adj_opts.read = false;
+	
+	if (value > adj_opts.fix_upper_thr || value < adj_opts.fix_lower_thr)
+	{
+		value += adj_opts.adj_value;
+	}
+	else if (adj_opts.urb>= value && value <= adj_opts.lrb)
+	{
+		if (!adj_opts.read)
+			adj_opts.read = read_opts();
+		else
+			adj_opts.read = true; // we've read data last time and still within reading bounds
+	}
+
+	return value;
 }
 
 
