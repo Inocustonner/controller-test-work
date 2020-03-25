@@ -6,5 +6,5 @@ build*
 !CMakeLists.txt
 
 src/**.txt
-!src/**CMake.txt
+!src/**CMakeLists.txt
 copy_batch.bat

@@ -1,6 +1,6 @@
 #include "dll.h"
 #include "fixer.h"
-#include "dllInj.h"
+#include <dllInjLib/dllInj.h>
 #include <windows.h>
 
 #define CAVE void __declspec(naked)

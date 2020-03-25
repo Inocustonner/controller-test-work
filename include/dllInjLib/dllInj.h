@@ -5,6 +5,7 @@
 #include <vector>
 #include <array>
 #include <optional>
+#define NOMINMAX
 #include <windows.h>
 #include <type_traits>
 // #include <cstdio>
