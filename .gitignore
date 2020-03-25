@@ -1,4 +1,10 @@
 /bin
 /obj
+/tmp
+build*
 *.txt
+!CMakeLists.txt
+
+src/**.txt
+!src/**CMake.txt
 copy_batch.bat
