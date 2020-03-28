@@ -1,12 +1,16 @@
 #include "fixer.h"
+#include <chrono>
 #include <dllInjLib/dllInj.h>
+#include <odbc/odbc.hpp>
 #include <algorithm>
 #include <string>
 
 // #include <iostream>
 
 constexpr double phase0_thr_default = 10000.0; // kg
-constexpr double error_default = 100.0;		// kg
+constexpr double error_default = 10000.0;		// kg
+
+static Odbc *database_p;
 
 struct State
 {
@@ -24,6 +28,31 @@ struct State
 
 State state = {};
 
+
+void record(double p1, double ret_val)
+{	
+	long long unsigned time = std::chrono::duration_cast<std::chrono::milliseconds>(
+																					  std::chrono::system_clock::now().time_since_epoch()
+																					  ).count();
+	static decltype(time) prev_time = 0;
+	
+	if (time != prev_time)
+	{
+		int inp_value = (int)p1;
+		int res_value = (int)ret_val;
+		char query_buffer[128] = {};
+		snprintf(query_buffer, std::size(query_buffer), "INSERT INTO debug_phases "
+				 "VALUES(%llu, %d, %d, %d, %d, %d, %d, %d);", time, inp_value, res_value, state.curr_phase_i, (int)state.max, (int)state.corr, (int)state.phase0_thr, (int)state.error);
+		Stmt *stmt = database_p->exec_query(query_buffer);
+		if (!stmt)
+		{
+			printf("error : %d\n", stmt->get_status_code());
+		}	
+	}
+	prev_time = time;
+}
+
+
 void reset_state()
 {
 	state.max = 0.0;
@@ -34,7 +63,6 @@ void reset_state()
 
 double phase2(double p1)
 {
-	printf("phase 2\n");
 	if (p1 > state.p0)
 	{
 		reset_state();
@@ -46,7 +74,6 @@ double phase2(double p1)
 // double phase1(double p1, bool is_stable)
 double phase1(double p1)
 {
-	printf("phase 1\n");
 	if (state.read_f && state.p0 <= state.phase0_thr) // I point
 	{
 		// read from db
@@ -60,7 +87,6 @@ double phase1(double p1)
 
 double phase0(double p1)
 {
-	printf("phase 0\n");
 	if (p1 >= state.p0)
 	{
 		state.read_f = true;
@@ -92,7 +118,26 @@ double fix(double p1)
 		ret_value = phase2(p1);
 	}
 	state.p0 = p1;
+	record(p1, ret_value);
 	return ret_value;
+}
+
+
+bool init_db()
+{
+	const char *conn_str = "DRIVER={PostgreSQL ANSI}; SERVER=localhost; PORT=5432; DATABASE=cars; UID=postgres; PWD=root;";
+	database_p = new Odbc;
+	database_p->set_connection_string(conn_str);
+	return database_p->connect();
+}
+
+
+std::string path_to_ini(std::string ini_filename)
+{
+	std::string ini_path = GetCurrentProcPath();
+	size_t path_len = ini_path.find_last_of("\\") + 1;
+	ini_path.replace(path_len, ini_path.size() - path_len, ini_filename);
+	return ini_path;
 }
 
 
@@ -111,17 +156,11 @@ void read_opts(FILE *fp)
 }
 
 
-std::string path_to_ini(std::string ini_filename)
-{
-	std::string ini_path = GetCurrentProcPath();
-	size_t path_len = ini_path.find_last_of("\\") + 1;
-	ini_path.replace(path_len, ini_path.size() - path_len, ini_filename);
-	return ini_path;
-}
-
-
 bool init_fixer(const char *ini_filename)
 {
+	if (!init_env() || !init_db())
+		return false;
+
 	std::string ini_path = path_to_ini(ini_filename);
 	printf("settings file path : \n\t%s\n", ini_path.c_str());
 
@@ -133,4 +172,11 @@ bool init_fixer(const char *ini_filename)
 	reset_state();
 
 	return true;
+}
+
+
+void close_connection()
+{
+	delete database_p;
+	free_env();
 }
