@@ -17,10 +17,22 @@ CAVE cave1()
 	}
 	__asm
 	{
+		// push word status_var
+		add eax, 0Eh
+
+		push eax
 		sub esp, 08h
+
+		mov eax, 0023FC10h
+		add eax, base_ima
+		fld tbyte ptr[eax]
 		fstp qword ptr[esp]
 		call fix
+
 		add esp, 08h
+		pop eax
+	
+		// save result
 		fld st(0)
 		fstp tbyte ptr[ebp - 020h]
 		
@@ -35,6 +47,9 @@ CAVE cave1()
 	{
 		popfd
 		popad
+
+		cmp word ptr[eax + 0Eh], 30h
+
 		ret
 	}
 }
@@ -44,7 +59,7 @@ void insert_caves(const HANDLE h_proc)
 {
 
 	base_ima = (DWORD)GetExeModule(h_proc);
-	PlaceCodeCave(h_proc, (DWORD)cave1, 0x0021C64B, 0x1C); // 0x1A
+	PlaceCodeCave(h_proc, (DWORD)cave1, 0x0021C68E); // cmp word ptr [eax+0Eh], 30h
 }
 
 

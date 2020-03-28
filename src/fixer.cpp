@@ -99,8 +99,9 @@ double phase0(double p1)
 }
 
 
-double fix(double p1)
+double fix(double p1, char *isnt_stable)
 {
+	printf("%c\n", *is_stable);
 	double ret_value = p1;							 // = p1 is for debug purpose
 	if (p1 < state.phase0_thr)
 	{
@@ -119,7 +120,8 @@ double fix(double p1)
 	}
 	state.p0 = p1;
 	record(p1, ret_value);
-	return ret_value;
+	// return ret_value;
+	return 0.0;
 }
 
 

@@ -22,7 +22,7 @@ HMODULE GetExeModule();			// for the current process
 std::string GetModulePath(HMODULE h_mod);
 std::string GetCurrentProcPath();
 
-bool PlaceCodeCave(const HANDLE h_proc, DWORD cave_addr, DWORD hole_RVA, DWORD nop_cnt);
+bool PlaceCodeCave(const HANDLE h_proc, DWORD cave_addr, DWORD hole_RVA, DWORD nop_cnt = 0);
 bool CreateConsole();
 
 /* template code */
