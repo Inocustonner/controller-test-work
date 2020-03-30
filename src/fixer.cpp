@@ -1,7 +1,13 @@
 #include "fixer.h"
 #include <chrono>
 #include <dllInjLib/dllInj.h>
-#include <odbc/odbc.hpp>
+
+#include <odbc/Connection.h>
+#include <odbc/Environment.h>
+#include <odbc/Exception.h>
+#include <odbc/PreparedStatement.h>
+#include <odbc/ResultSet.h>
+
 #include <algorithm>
 #include <string>
 
@@ -10,7 +16,8 @@
 constexpr double input_error_default	= 10000.0;	// kg
 constexpr double error_default			= 10000.0;	// kg
 
-Odbc *debug_db_p, *cars_db_p, *those_db_p;
+odbc::EnvironmentRef odbc_env;
+odbc::ConnectionRef cars_db, debug_db, those_db;
 
 struct State
 {
@@ -55,43 +62,25 @@ State state = {};
 
 void update_state()
 {
-	// retreview last id
-	Stmt *stmt = those_db_p->exec_query("SELECT id FROM fac_cars ORDER BY id DESC LIMIT 1;");
-	if (stmt == nullptr)
+	try
 	{
-		printf("Error %d\n", those_db_p->get_status_code());
-		return;
-	}
+		// retreview last id
+		auto pSelect = those_db->prepareStatement("SELECT id FROM fac_cars ORDER BY id DESC LIMIT 1");
+		auto rs = pSelect->executeQuery();
 
-	Data_Matrix_t id_v = stmt->get_all_rows();
-	if (std::size(id_v) == 0)
+		int id = *rs->getInt(1);
+		// get info about the car
+		pSelect = cars_db->prepareStatement("SELECT weight, correct FROM cars_table WHERE id = ?");
+		pSelect->setInt(1, id);
+		rs = pSelect->executeQuery();
+
+		state.min_weight = *rs->getInt(1);
+		state.corr = *rs->getInt(2);
+	}
+	catch (const odbc::Exception& e)
 	{
-		printf("Error %d\n", stmt->get_status_code());
-		return;
+		printf("%s\n", e.what());
 	}
-	
-	int id = *(int*)id_v[0][0].get_data();
-
-	// get info about the car
-	char query_buffer[128] = {};
-	snprintf(query_buffer, std::size(query_buffer),
-			 "SELECT %s %s FROM cars_table WHERE id=%d;", "weight", "correct", id);
-	stmt = cars_db_p->exec_query(reinterpret_cast<const char*>(query_buffer));
-	if (stmt == nullptr)
-	{
-		printf("Error %d\n", those_db_p->get_status_code());
-		return;
-	}
-
-	Data_Matrix_t info_v = stmt->get_all_rows();
-	if (std::size(info_v) == 0)
-	{
-		printf("Error %d\n", stmt->get_status_code());
-		return;
-	}
-
-	state.min_weight = (double)*(int*)(info_v[0][0].get_data());
-	state.corr = (double)*(int*)(info_v[0][1].get_data());
 }
 
 
@@ -167,19 +156,29 @@ double fix(double p1, bool is_stable)
 
 bool init_dbs()
 {
-	const char *conn_str = "DRIVER={PostgreSQL ANSI}; SERVER=localhost; PORT=5432; DATABASE=cars; UID=postgres; PWD=root;";
-	cars_db_p = new Odbc;
-	cars_db_p->set_connection_string(conn_str);
-	
-	const char *conn_str2 = "DRIVER={PostgreSQL ANSI}; SERVER=localhost; PORT=5432; DATABASE=those_cars; UID=postgres; PWD=root;";
-	those_db_p = new Odbc;
-	those_db_p->set_connection_string(conn_str2);
+	try
+	{
+		odbc_env = odbc::Environment::create();
 
-	const char *conn_str3 = "DRIVER={PostgreSQL ANSI}; SERVER=localhost; PORT=5432; DATABASE=debug; UID=postgres; PWD=root;";
-	debug_db_p = new Odbc;
-	debug_db_p->set_connection_string(conn_str3);
+		cars_db = odbc_env->createConnection();
+		const char *cars_conn_str = "DRIVER={PostgreSQL ANSI}; SERVER=localhost; PORT=5432; DATABASE=cars; UID=postgres; PWD=root;";
+		cars_db->connect(cars_conn_str);
 
-	return cars_db_p->connect() && those_db_p->connect() && debug_db_p->connect();
+		those_db = odbc_env->createConnection();
+		const char *those_conn_str = "DRIVER={PostgreSQL ANSI}; SERVER=localhost; PORT=5432; DATABASE=those_cars; UID=postgres; PWD=root;";
+		those_db->connect(those_conn_str);
+
+		debug_db = odbc_env->createConnection();
+		const char *debug_conn_str = "DRIVER={PostgreSQL ANSI}; SERVER=localhost; PORT=5432; DATABASE=debug; UID=postgres; PWD=root;";
+		debug_db->connect(debug_conn_str);
+	}
+	catch (const odbc::Exception& e)
+	{
+		printf("%s\n", e.what());
+		return false;
+	}
+
+	return true;
 }
 
 
@@ -209,7 +208,7 @@ void read_opts(FILE *fp)
 
 bool init_fixer(const char *ini_filename)
 {
-	if (!init_env() || !init_dbs())
+	if (!init_dbs())
 		return false;
 
 	std::string ini_path = path_to_ini(ini_filename);
@@ -223,13 +222,4 @@ bool init_fixer(const char *ini_filename)
 	reset_state();
 
 	return true;
-}
-
-
-void close_connection()
-{
-	delete cars_db_p;
-	delete debug_db_p;
-	delete those_db_p;
-	free_env();
 }

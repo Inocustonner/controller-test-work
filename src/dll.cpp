@@ -79,9 +79,3 @@ EXPORT(void, init)()
 		printf("Failed to init\n");
 	}
 }
-
-
-void on_close()
-{
-	close_connection();
-}
