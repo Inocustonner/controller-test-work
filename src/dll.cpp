@@ -17,10 +17,14 @@ CAVE cave1()
 	}
 	__asm
 	{
-		// push word status_var
+		// push bool is_stable
 		add eax, 0Eh
-
+		xor ecx, ecx
+		mov cl, byte ptr[eax]	// mov ecx, [char isnt_stable]
+		mov eax, 031h
+		sub eax, ecx
 		push eax
+
 		sub esp, 08h
 
 		mov eax, 0023FC10h

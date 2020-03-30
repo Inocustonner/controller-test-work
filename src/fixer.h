@@ -1,4 +1,4 @@
 bool init_fixer(const char *ini_filename);
 
-double fix(double value, char *isnt_stable);
+double fix(double value, bool is_stable);
 void close_connection();
