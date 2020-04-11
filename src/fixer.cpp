@@ -23,10 +23,11 @@ std::thread reader_thread;		// thread that reads from serial port
 
 struct State
 {
-	double min_weight	= 200.0;
-	double corr			= 5000.0;
-	double p0			= 0.0;
-	int phase			= 0;
+	double min_weight		= 1000.0;
+	double corr			= 0.0;
+	int event_id			= 0;
+	double p0				= 0.0;
+	int phase				= 0;
 	std::string id		= "";
 }state;
 
@@ -43,10 +44,12 @@ void store(double p1)
 	{
 		// id, /code id,/ mass, timestamp(default like)
 		odbc::PreparedStatementRef pi =
-			store_db->prepareStatement("INSERT INTO info VALUES(?, ?)");
+			store_db->prepareStatement("INSERT INTO info VALUES(?, ?, ?)\
+ON CONFLICT (event_id) DO UPDATE SET id=EXCLUDED.id, weight=EXCLUDED.weight, ts=CURRENT_TIMESTAMP");
 		pi->setString(1, state.id);
-		pi->setInt(2, (int)p1);
-		pi->executeQuery();
+		pi->setInt(2, state.event_id);
+		pi->setInt(3, (int)(p1 - state.corr));
+		pi->executeUpdate();
 	}
 	catch (const std::exception &e)
 	{
@@ -111,7 +114,7 @@ void serial_read(std::string portname,
 
 			if (state.phase != 0)
 			{
-				printf("Error previous car is still on the scallars");
+				printf("Error previous car is still on the scallars\n");
 				// continue;
 			}
 
@@ -119,13 +122,26 @@ void serial_read(std::string portname,
 			{
 				const size_t max_line_sz = 65536;
 				state.id = serial_port.readline(max_line_sz, "\r");
-				odbc::PreparedStatementRef ps = cars_db->prepareStatement("SELECT weight, corr FROM cars_table WHERE id = ?");
+				state.id.pop_back(); // remove eol symbol
+
+				odbc::PreparedStatementRef ps = cars_db->prepareStatement("SELECT weight, corr FROM cars_table WHERE id=?");
 				ps->setString(1, state.id);
 				odbc::ResultSetRef rs = ps->executeQuery();
-				rs->next();
 
-				state.min_weight = (double)*rs->getInt(1);
-				state.corr = (double)*rs->getInt(2);
+				if (rs->next())
+				{
+					// increment event_id
+					ps = store_db->prepareStatement("SELECT nextval('event_id')");
+					rs = ps->executeQuery();
+					if (rs->next())
+					{
+					    state.event_id = (int)*rs->getLong(1);
+					}
+
+					state.min_weight = (double)*rs->getInt(1);
+					state.corr = (double)*rs->getInt(2);
+					store(0);
+				}
 			}
 			catch (const std::exception &e)
 			{
