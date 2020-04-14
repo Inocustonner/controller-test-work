@@ -8,11 +8,14 @@
 #include <odbc/PreparedStatement.h>
 #include <odbc/ResultSet.h>
 
+#include <inipp.h>
+
 #include <string_view>
 #include <thread>
 #include <cstdio>
 #include <cstdlib>
-
+#include <atomic>
+#include <fstream>
 odbc::EnvironmentRef odbc_env;
 odbc::ConnectionRef cars_db, store_db, store_info_db;
 // in cars_db cars table is used
@@ -20,28 +23,44 @@ odbc::ConnectionRef cars_db, store_db, store_info_db;
 std::thread reader_thread;		// thread that reads from serial port
 
 
+std::atomic<bool> authorized = false;	// has this driver pass authorization
+
 struct PortInfo
 {
 	std::string name;			// "COM1" for example
 	size_t baudrate;
 };
 
+struct DbAuth
+{
+	std::string server, port, db, uid, pwd;
+};
+
+struct Settings
+{
+	std::vector<PortInfo> pi;				// contains info about ports
+	DbAuth cars, store, store_info;
+};
 
 struct State
 {
-	double min_weight		= 1000.0;
-	double corr				= 0.0;
-	int event_id			= 0;
-	double p0				= 0.0;
-	int phase				= 0;
-	std::string id			= "";
-	bool authorized			= false;
+	double reset_thr					= 15000.0; // the value on scalars below what do reset
+	double store_diff					= 200.0;   // if difference between values on scalars  equals store_diff store those values
+
+	double min_weight					= 1000.0;	// set on read_serial. Value after what apply correction
+	double corr						= 0.0;		// correction value
+	int event_id						= 0;
+	double p0							= 0.0;		// previous value on scalars
+	int phase							= 0;		// current phase
+	std::string id					= "";		// car ident
 }state;
+
 
 inline
 void reset_state()
 {
 	state = State{};
+	authorized = false;
 }
 
 
@@ -55,6 +74,7 @@ void store(double p1)
 		ps->setString(2, state.id);
 		ps->setInt(3, (int)(p1 - state.corr));
 		ps->setInt(4, (int)p1);
+		ps->executeUpdate();
 	}
 	catch (const std::exception &e)
 	{
@@ -63,20 +83,19 @@ void store(double p1)
 }
 
 
+inline
 double phase1(double p1, bool is_stable)
 {
-	if (is_stable)
-	{
-		store(p1);
-	}
 	return p1 - state.corr;
 }
 
 
+inline
 void phase0(double p1)
 {
-	if (state.p0 > p1 && state.p0 > state.min_weight) // reset on entering
+	if (state.p0 > p1 && state.p0 > state.reset_thr) // reset on entering
 	{
+		printf("resetting\n");
 		reset_state();
 	}
 }
@@ -85,7 +104,7 @@ void phase0(double p1)
 double fix(double p1, bool is_stable)
 {
 	double ret_value = p1;
-	if (state.authorized)
+	if (authorized)
 	{
 		if (p1 < state.min_weight)
 		{
@@ -97,26 +116,36 @@ double fix(double p1, bool is_stable)
 			state.phase = 1;
 			ret_value = phase1(p1, is_stable);
 		}
+
+		if (std::abs(p1 - state.p0) > state.store_diff && is_stable)
+		{
+			printf("%lf %lf %d\n", p1, state.p0, std::abs(p1 - state.p0) > state.store_diff);
+			store(p1);
+		}
 	}
-	else if (p1 >= state.min_weight)
+	else if (p1 >= state.reset_thr)
 	{
 		printf("Unauthorized driver\n");
-	}
+	}	
+
+	state.p0 = p1;
 	return ret_value;		
 }
+
 
 inline
 void store_info(const std::string &com, const std::string &barcode)
 {
 	//															 event_id, com, barcode(event_id yet), (default timestamp)
 	odbc::PreparedStatementRef ps = store_info_db->prepareStatement("INSERT INTO info VALUES(?, ?, ?)"\
-																 "ON CONFLICT (event_id) DO UPDATE SET"
+																 "ON CONFLICT (event_id) DO UPDATE SET "
 																 "event_id=EXCLUDED.event_id, com=EXCLUDED.com, barcode=EXCLUDED.barcode, ts=CURRENT_TIMESTAMP");
 	ps->setInt(1, state.event_id);
 	ps->setString(2, com);
 	ps->setString(3, barcode);
 	ps->executeUpdate();
 }
+
 
 inline
 void inc_event_id()
@@ -154,15 +183,16 @@ void serial_read(std::vector<PortInfo> pi)
 		while (true)
 		{
 			serial::Serial &serial_port = serial_pool.bad_wait();
-			if (state.authorized)
+			const size_t max_line_sz = 65536;
+			if (authorized)
 			{
 				printf("Error double authorization\n");
-				// continue;
+				serial_port.readline(max_line_sz, "\r"); // deny given data
+				continue;
 			}
 
 			try
 			{
-				const size_t max_line_sz = 65536;
 				std::string barcode = serial_port.readline(max_line_sz, "\r"); // from bar code
 				barcode.pop_back(); // remove eol symbol
 
@@ -175,7 +205,7 @@ void serial_read(std::vector<PortInfo> pi)
 
 				odbc::PreparedStatementRef ps = cars_db->prepareStatement("SELECT weight, corr FROM cars_table WHERE id=?");
 				ps->setString(1, state.id);
-				odbc::ResultSetRef rs = ps->executeQuery();				
+				odbc::ResultSetRef rs = ps->executeQuery();
 
 				if (rs->next())
 				{
@@ -187,7 +217,7 @@ void serial_read(std::vector<PortInfo> pi)
 					state.min_weight = (double)*rs->getInt(1);
 					state.corr = (double)*rs->getInt(2);
 					
-					state.authorized = true;
+					authorized = true;
 				}
 			}
 			catch (const std::exception &e)
@@ -205,22 +235,43 @@ void serial_read(std::vector<PortInfo> pi)
 }
 
 
-bool init_db()
+bool init_db(Settings set)
 {
 	try
 	{
 		odbc_env = odbc::Environment::create();
 		cars_db = odbc_env->createConnection();
-		const char *cars_conn_str = "DRIVER={PostgreSQL ANSI}; SERVER=localhost; PORT=5432; DATABASE=cars; UID=postgres; PWD=root;";
-		cars_db->connect(cars_conn_str);
+		// const char *cars_conn_str = "DRIVER={PostgreSQL ANSI}; SERVER=localhost; PORT=5432; DATABASE=cars; UID=postgres; PWD=root;";
+		std::string cars_conn_str = "DRIVER={PostgreSQL ANSI};"
+			"SERVER=" + set.cars.server +
+			";PORT=" + set.cars.port +
+			";DATABASE=" + set.cars.db +
+			";UID=" + set.cars.uid +
+			";PWD=" + set.cars.pwd;
+
+		cars_db->connect(cars_conn_str.c_str());
 
 		store_db = odbc_env->createConnection();
-		const char *store_conn_str = "DRIVER={PostgreSQL ANSI}; SERVER=localhost; PORT=5432; DATABASE=store; UID=postgres; PWD=root;";
-		store_db->connect(store_conn_str);
+		// const char *store_conn_str = "DRIVER={PostgreSQL ANSI}; SERVER=localhost; PORT=5432; DATABASE=store; UID=postgres; PWD=root;";
+		std::string store_conn_str = "DRIVER={PostgreSQL ANSI};"
+			"SERVER=" + set.store.server +
+			";PORT=" + set.store.port +
+			";DATABASE=" + set.store.db +
+			";UID=" + set.store.uid +
+			";PWD=" + set.store.pwd;
+		
+		store_db->connect(store_conn_str.c_str());
 
 		store_info_db = odbc_env->createConnection();
-		const char *store_info_conn_str = "DRIVER={PostgreSQL ANSI}; SERVER=localhost; PORT=5432; DATABASE=store_info; UID=postgres; PWD=root;";
-		store_info_db->connect(store_info_conn_str);
+		// const char *store_info_conn_str = "DRIVER={PostgreSQL ANSI}; SERVER=localhost; PORT=5432; DATABASE=store_info; UID=postgres; PWD=root;";
+		std::string store_info_conn_str = "DRIVER={PostgreSQL ANSI};"
+			"SERVER=" + set.store_info.server +
+			";PORT=" + set.store_info.port +
+			";DATABASE=" + set.store_info.db +
+			";UID=" + set.store_info.uid +
+			";PWD=" + set.store_info.pwd;
+
+		store_info_db->connect(store_info_conn_str.c_str());
 	}
 	catch (const odbc::Exception &e)
 	{
@@ -240,18 +291,64 @@ std::string path_to_ini(std::string ini_filename)
 }
 
 
+Settings read_settings(std::string ini_path)
+{
+	inipp::Ini<char> ini;
+	std::ifstream is(ini_path);
+	ini.parse(is);
+
+	Settings set;
+	for (auto it = std::begin(ini.sections["DEFAULT"]); it != std::end(ini.sections["DEFAULT"]); ++it)
+	{
+		if (it->first.starts_with("COM"))
+		{
+			set.pi.push_back({ it->first, stoul(it->second) });
+		}
+		else
+		{
+			std::istringstream iss{ it->second };
+			if (it->first == "carsdb")
+			{
+				iss >> set.cars.server >> set.cars.port >> set.cars.db >> set.cars.uid >> set.cars.pwd;
+			}
+			else if (it->first == "storedb")
+			{
+				iss >> set.store.server >> set.store.port >> set.store.db >> set.store.uid >> set.store.pwd;
+			}
+			else if (it->first == "store_infodb")
+			{
+				iss >> set.store_info.server >> set.store_info.port >> set.store_info.db >> set.store_info.uid >> set.store_info.pwd;
+			}
+			else if (it->first == "reset_thr")
+			{
+				iss >> state.reset_thr;
+				printf("reset_thr %lf\n", state.reset_thr);
+			}
+			else if (it->first == "store_diff")
+			{
+				iss >> state.store_diff;
+			}
+			else
+			{
+				printf("unkonwn option is %s ignored\n", it->first.c_str());
+			}
+		}
+	}
+	return set;
+}
+
+
 bool init_fixer(const char *ini_filename)
 {
-	if (!init_db())
+	Settings set = read_settings(path_to_ini(ini_filename));
+	if (!init_db(set))
 	{
 		return false;
 	}
 
 	reset_state();
 	
-	std::vector<PortInfo> pi;
-	pi.push_back({ "COM4", 9600 });
-	reader_thread = std::thread(serial_read, pi);
+	reader_thread = std::thread(serial_read, set.pi);
 	reader_thread.detach();
 	return true;
 }

@@ -1,10 +1,12 @@
 #include "serialPool.hpp"
 #include <chrono>
 #include <thread>
+#include <cstdio>
 
 serial::Serial& SerialPool::bad_wait()
 {
 	using namespace std::chrono_literals;
+	printf("%d\n", std::size(ports));
 	while (true)
 	{
 		for (auto &serial : ports)

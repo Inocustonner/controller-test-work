@@ -1,7 +1,6 @@
 cmake_minimum_required(VERSION 3.9)
 include_directories("${CMAKE_SOURCE_DIR}/src")
 include_directories("${CMAKE_SOURCE_DIR}/include")
-include_directories("D:/Work/Test1/code/odbc-cpp-wrapper/src")
 link_directories("${CMAKE_SOURCE_DIR}/lib/${CMAKE_BUILD_TYPE}")
 
 
