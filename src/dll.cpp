@@ -70,7 +70,7 @@ void insert_caves(const HANDLE h_proc)
 EXPORT(void, init)()
 {
 	HANDLE h_proc = GetCurrentProcess();
-	if (CreateConsole() && init_fixer("ini.ini"))
+	if (init_fixer("ini.ini"))
 	{
 		insert_caves(h_proc);		
 	}

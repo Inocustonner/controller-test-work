@@ -6,7 +6,6 @@
 serial::Serial& SerialPool::bad_wait()
 {
 	using namespace std::chrono_literals;
-	printf("%d\n", std::size(ports));
 	while (true)
 	{
 		for (auto &serial : ports)

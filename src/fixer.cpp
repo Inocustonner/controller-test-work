@@ -16,6 +16,8 @@
 #include <cstdlib>
 #include <atomic>
 #include <fstream>
+#include <cstdarg>
+
 odbc::EnvironmentRef odbc_env;
 odbc::ConnectionRef cars_db, store_db, store_info_db;
 // in cars_db cars table is used
@@ -24,11 +26,28 @@ std::thread reader_thread;		// thread that reads from serial port
 
 
 std::atomic<bool> authorized = false;	// has this driver pass authorization
+bool debug = false;
+
+auto dprintf(const char *fmt, ...)
+{
+	if (debug)
+	{
+		va_list al;
+		va_start(al, fmt);
+		int rc = vprintf(fmt, al);
+		va_end(al);
+		return rc;
+	}
+	return 0;
+}
 
 struct PortInfo
 {
 	std::string name;			// "COM1" for example
-	size_t baudrate;
+	size_t baudrate					= 9600;
+	serial::bytesize_t bytesize		= serial::bytesize_t::eightbits; // fivebits, sixbits, sevenbits, eightbits
+	serial::parity_t	 parity		= serial::parity_t::parity_none;  // parity_none, parity_even, parity_odd
+	serial::stopbits_t stopbits		= serial::stopbits_t::stopbits_one; // stopbits_one, stopbits_one_point_five, stopits_two
 };
 
 struct DbAuth
@@ -78,7 +97,7 @@ void store(double p1)
 	}
 	catch (const std::exception &e)
 	{
-		printf("%s\n", e.what());
+		dprintf("%s\n", e.what());
 	}
 }
 
@@ -95,7 +114,7 @@ void phase0(double p1)
 {
 	if (state.p0 > p1 && state.p0 > state.reset_thr) // reset on entering
 	{
-		printf("resetting\n");
+		dprintf("resetting\n");
 		reset_state();
 	}
 }
@@ -119,13 +138,12 @@ double fix(double p1, bool is_stable)
 
 		if (std::abs(p1 - state.p0) > state.store_diff && is_stable)
 		{
-			printf("%lf %lf %d\n", p1, state.p0, std::abs(p1 - state.p0) > state.store_diff);
 			store(p1);
 		}
 	}
 	else if (p1 >= state.reset_thr)
 	{
-		printf("Unauthorized driver\n");
+		dprintf("Unauthorized driver\n");
 	}	
 
 	state.p0 = p1;
@@ -172,9 +190,11 @@ void serial_read(std::vector<PortInfo> pi)
 	{
 		ports[i].setPort(pi[i].name);
 		ports[i].setBaudrate(pi[i].baudrate);
+		ports[i].setBytesize(pi[i].bytesize);
+		ports[i].setParity(pi[i].parity);
 		ports[i].open();
 		if (!ports[i].isOpen())
-			printf("Error oppening port %s\n", ports[i].getPort().c_str());
+			dprintf("Error oppening port %s\n", ports[i].getPort().c_str());
 	}
 
 	try
@@ -186,7 +206,7 @@ void serial_read(std::vector<PortInfo> pi)
 			const size_t max_line_sz = 65536;
 			if (authorized)
 			{
-				printf("Error double authorization\n");
+				dprintf("Error double authorization\n");
 				serial_port.readline(max_line_sz, "\r"); // deny given data
 				continue;
 			}
@@ -195,10 +215,11 @@ void serial_read(std::vector<PortInfo> pi)
 			{
 				std::string barcode = serial_port.readline(max_line_sz, "\r"); // from bar code
 				barcode.pop_back(); // remove eol symbol
-
+				dprintf("%s: read %s\n", serial_port.getPort().c_str(), barcode.c_str());
+				
 				if (!is_barcode_valid(barcode))
 				{
-					printf("Invalid barcode\n");
+					dprintf("Invalid barcode\n");
 					continue;
 				}
 				state.id = barcode;
@@ -222,13 +243,13 @@ void serial_read(std::vector<PortInfo> pi)
 			}
 			catch (const std::exception &e)
 			{
-				printf("%s\n", e.what());
+				dprintf("%s\n", e.what());
 			}
 		}
 	}
 	catch (const std::exception &e)
 	{
-		printf("%s\n", e.what());
+		dprintf("%s\n", e.what());
 		system("pause");
 		exit(0);
 	}
@@ -275,7 +296,7 @@ bool init_db(Settings set)
 	}
 	catch (const odbc::Exception &e)
 	{
-		printf("%s\n", e.what());
+		dprintf("%s\n", e.what());
 		return false;
 	}
 	return true;
@@ -300,37 +321,109 @@ Settings read_settings(std::string ini_path)
 	Settings set;
 	for (auto it = std::begin(ini.sections["DEFAULT"]); it != std::end(ini.sections["DEFAULT"]); ++it)
 	{
-		if (it->first.starts_with("COM"))
+		std::istringstream iss{ it->second };
+		if (it->first == "carsdb")
 		{
-			set.pi.push_back({ it->first, stoul(it->second) });
+			iss >> set.cars.server >> set.cars.port >> set.cars.db >> set.cars.uid >> set.cars.pwd;
+		}
+		else if (it->first == "storedb")
+		{
+			iss >> set.store.server >> set.store.port >> set.store.db >> set.store.uid >> set.store.pwd;
+		}
+		else if (it->first == "store_infodb")
+		{
+			iss >> set.store_info.server >> set.store_info.port >> set.store_info.db >> set.store_info.uid >> set.store_info.pwd;
+		}
+		else if (it->first == "reset_thr")
+		{
+			iss >> state.reset_thr;
+			dprintf("reset_thr %lf\n", state.reset_thr);
+		}
+		else if (it->first == "store_diff")
+		{
+			iss >> state.store_diff;
 		}
 		else
 		{
-			std::istringstream iss{ it->second };
-			if (it->first == "carsdb")
+			dprintf("unkonwn option is %s ignored\n", it->first.c_str());
+		}
+	}
+
+	for (auto it = std::begin(ini.sections["COM"]); it != std::end(ini.sections["COM"]); ++it)
+	{
+		PortInfo pi;
+		std::stringstream is(it->second);
+
+		pi.name = it->first;
+		size_t baudrate = 0, bytesize = 0;
+		std::string parity = "";
+		is >> baudrate >> bytesize >> parity;
+
+		// check baudrate
+		if (baudrate)
+		{
+			switch (baudrate)
 			{
-				iss >> set.cars.server >> set.cars.port >> set.cars.db >> set.cars.uid >> set.cars.pwd;
+				case 9600:
+				case 19200:
+				case 38400:
+				case 57600:
+				case 115200:
+					pi.baudrate = baudrate;
+					break;
+
+				default:
+					dprintf("%s: Baudrate %u is unusual\n", pi.name.c_str(), (pi.baudrate = baudrate));
 			}
-			else if (it->first == "storedb")
+		}
+		
+		if (bytesize)
+		{
+			switch (bytesize)
 			{
-				iss >> set.store.server >> set.store.port >> set.store.db >> set.store.uid >> set.store.pwd;
+				case 5:
+				case 6:
+				case 7:
+				case 8:
+					pi.bytesize = static_cast<serial::bytesize_t>(bytesize);
+					break;
+
+				default:
+					dprintf("%s: Invalid bytesize %u. Available [5-8] values. Set to default %u.", pi.name.c_str(), bytesize, static_cast<unsigned int>(pi.bytesize));
 			}
-			else if (it->first == "store_infodb")
+		}
+
+		if (std::size(parity))
+		{
+			if (parity == "even")
 			{
-				iss >> set.store_info.server >> set.store_info.port >> set.store_info.db >> set.store_info.uid >> set.store_info.pwd;
+				pi.parity = serial::parity_t::parity_even;
 			}
-			else if (it->first == "reset_thr")
+			else if (parity == "odd")
 			{
-				iss >> state.reset_thr;
-				printf("reset_thr %lf\n", state.reset_thr);
+				pi.parity = serial::parity_t::parity_odd;
 			}
-			else if (it->first == "store_diff")
+			else if (parity == "none")
 			{
-				iss >> state.store_diff;
+				pi.parity = serial::parity_t::parity_none;
 			}
 			else
 			{
-				printf("unkonwn option is %s ignored\n", it->first.c_str());
+				dprintf("%s: Invalid parity value %s. Available \"even\", \"odd\", \"none\". Set to default \"none\"\n", pi.name.c_str(), parity.c_str());
+			}
+		}
+
+		set.pi.push_back(pi);
+	}
+
+	if (ini.sections.find("DEBUG") != std::end(ini.sections))
+	{
+		for (auto it = std::begin(ini.sections["DEBUG"]); it != std::end(ini.sections["DEBUG"]); ++it)
+		{
+			if (it->first == "Console" && it->second == "en")
+			{
+				debug = true;
+				CreateConsole();
 			}
 		}
 	}
