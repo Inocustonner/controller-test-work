@@ -1,3 +1,4 @@
+#include "shared.hpp"
 #include "serialPool.hpp"
 #include <chrono>
 #include <thread>
@@ -5,6 +6,11 @@
 
 serial::Serial& SerialPool::bad_wait()
 {
+	if (log_level > 0)
+	{
+		printf("Listening to COM ports\n");
+	}
+
 	using namespace std::chrono_literals;
 	while (true)
 	{
