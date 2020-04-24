@@ -2,6 +2,7 @@
 #include "msg.hpp"
 
 #include <cstdio>
+#include <array>
 #include <string>
 
 #include <odbc/Connection.h>	// https://github.com/SAP/odbc-cpp-wrapper
@@ -12,21 +13,45 @@
 
 struct State
 {
-	double reset_thr					= 15000.0; // the value on scalars below what do reset
-	double store_diff					= 200.0;   // if difference between values on scalars  equals store_diff store those values
+	double reset_thr				= 15000.0; // the value on scalars below what do reset
+	double store_diff				= 200.0;   // if difference between values on scalars  equals store_diff store those values
 
-	double min_weight					= 1000.0;	// set on read_serial. Value after what apply correction
+	double min_weight				= 1000.0;	// set on read_serial. Value after what apply correction
 	double corr						= 0.0;		// correction value
-	int event_id						= 0;
-	double p0							= 0.0;		// previous value on scalars
-	int phase							= 0;		// current phase
+	int event_id					= 0;
+	double p0						= 0.0;		// previous value on scalars
+	int phase						= 0;		// current phase
 	std::string id					= "";		// car ident
+	std::string com					= "";
 };
 
 
+// log_level:
+// 	0 - no console, db
+// 	1 - console, db
+// 	2 - console, no db
 extern int log_level;					// fixer.cpp
 extern bool debug;						// fixer.cpp
 extern odbc::ConnectionRef debug_db;
+
+
+template<typename ...Args> inline
+void dbprint(const char *fmt, Args&& ...args)
+{
+	try
+	{
+		static std::array<char, 1024> buf;
+		buf.fill('\0');			// zero buf
+		snprintf(buf.data(), std::size(buf), fmt, args...);
+		auto ps = debug_db->prepareStatement("INSERT INTO debug(code, message) VALUES(-1, )");
+		ps->executeUpdate();
+	}
+	catch (const odbc::Exception &e)
+	{
+		printf("Error while storing to debug db:\n\t%s", e.what());
+	}
+}
+
 
 template<typename ...Args> inline
 void dprintf(const char *fmt, Args&& ...args)
@@ -35,13 +60,21 @@ void dprintf(const char *fmt, Args&& ...args)
 	{
 		printf(fmt, args...);
 	}
+	if (log_level < 2)
+	{
+		dbprint(fmt, std::forward<Args>(args)...);
+	}
 }
 
-
+// add msg box
 static void dprintf(msg_t msg)
 {
 	if (log_level > 0)
 	{
 		printf("%d: %s\n", std::get<0>(msg), std::get<1>(msg));
+	}
+	if (log_level < 2)
+	{
+		dbprint("%d: %s", std::get<0>(msg), std::get<1>(msg));
 	}
 }

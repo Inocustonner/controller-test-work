@@ -21,7 +21,7 @@ std::thread reader_thread;		// thread that reads from serial port
 std::atomic<bool> authorized = false;	// has this driver pass authorization
 extern bool debug = false;
 extern int log_level = 0;
-
+std::string suffix = "";
 State state{};
 
 
@@ -38,16 +38,18 @@ void store(double p1)
 	try
 	{
 		// id, code id, mass, timestamp(default like)
-		odbc::PreparedStatementRef ps = store_db->prepareStatement("INSERT INTO info (event_id, id, weight, inp_weight) VALUES(?, ?, ?, ?)");
-		ps->setInt(1, state.event_id);
-		ps->setString(2, state.id);
-		ps->setInt(3, (int)(p1 - state.corr));
-		ps->setInt(4, (int)p1);
+		odbc::PreparedStatementRef ps = store_db->prepareStatement("INSERT INTO info (com, event_id, id, weight, inp_weight) VALUES(?, ?, ?, ?, ?)");
+		ps->setString(1, state.com);
+		ps->setInt(2, state.event_id);
+		ps->setString(3, state.id);
+		ps->setInt(4, (int)(p1 - state.corr));
+		ps->setInt(5, (int)p1);
 		ps->executeUpdate();
 	}
 	catch (const std::exception &e)
 	{
-		dprintf("%s\n", e.what());
+		dprintf("Error while storing to store_db:\n\t%s\n", e.what());
+		dprintf(msg<5>());
 	}
 }
 
@@ -156,13 +158,13 @@ void serial_read(std::vector<PortInfo> pi)
 			{
 				// dprintf("Error double authorization\n");
 				dprintf(msg<0>());
-				serial_port.readline(max_line_sz, "\r"); // deny given data
+				serial_port.readlines(max_line_sz, suffix); // deny given data
 				continue;
 			}
 
 			try
 			{
-				std::string barcode = serial_port.readline(max_line_sz, "\r"); // from bar code
+				std::string barcode = serial_port.readline(max_line_sz, suffix); // from bar code
 				barcode.pop_back(); // remove eol symbol
 				dprintf("%s: read %s\n", serial_port.getPort().c_str(), barcode.c_str());
 				
@@ -186,7 +188,7 @@ void serial_read(std::vector<PortInfo> pi)
 
 					state.min_weight = (double)*rs->getInt(1);
 					state.corr = (double)*rs->getInt(2);
-					
+					state.com = serial_port.getPort();
 					authorized = true;
 				}
 				else
@@ -198,13 +200,16 @@ void serial_read(std::vector<PortInfo> pi)
 			catch (const std::exception &e)
 			{
 				dprintf("Exception while processing COM:\n\t%s\n", e.what());
+				dprintf(msg<6>());
 			}
 		}
 	}
 	catch (const std::exception &e)
 	{
+		dprintf(msg<3>());
 		dprintf("Exception in " __FUNCTION__ ":\n\t%s\n", e.what());
-		system("pause");
+		if (log_level > 0)
+			system("pause");
 		exit(0);
 	}
 }

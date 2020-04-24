@@ -6,6 +6,7 @@
 #include <fstream>
 
 #define DEFAULT_LOG_LEVEL 1
+extern std::string suffix;
 
 bool init_db(Settings set, odbc::EnvironmentRef &odbc_env,
 			 odbc::ConnectionRef &cars_db,
@@ -116,9 +117,22 @@ Settings read_settings(const char *ini_filename, State &state)
 			iss >> state.store_diff;
 			dprintf("store_diff set to %lf\n", state.store_diff);
 		}
+		else if (it->first == "suffix")
+		{
+			if (iss.str() == "CR")
+				suffix = "\r";
+			else if (iss.str() == "LF")
+				suffix = "\n";
+			else if (iss.str() == "CRLF")
+				suffix = "\r\n";
+			else
+				suffix = iss.str();
+			printf("Suffix used : %s", suffix.c_str());
+		}
 		else
 		{
 			dprintf("unkonwn option is %s ignored\n", it->first.c_str());
+			dprintf(msg<4>());
 		}
 	}
 
