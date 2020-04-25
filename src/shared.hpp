@@ -1,5 +1,6 @@
 #pragma once
 #include "msg.hpp"
+#include <mmsg/mmsg.hpp>
 
 #include <cstdio>
 #include <array>
@@ -42,8 +43,9 @@ void dbprint(const char *fmt, Args&& ...args)
 	{
 		static std::array<char, 1024> buf;
 		buf.fill('\0');			// zero buf
-		snprintf(buf.data(), std::size(buf), fmt, args...);
-		auto ps = debug_db->prepareStatement("INSERT INTO debug(code, message) VALUES(-1, )");
+		snprintf(buf.data(), std::size(buf) - 1, fmt, args...);
+		auto ps = debug_db->prepareStatement("INSERT INTO debug(code, message) VALUES(-1, ?)");
+		ps->setCString(1, buf.data());
 		ps->executeUpdate();
 	}
 	catch (const odbc::Exception &e)
@@ -69,12 +71,19 @@ void dprintf(const char *fmt, Args&& ...args)
 // add msg box
 static void dprintf(msg_t msg)
 {
-	if (log_level > 0)
+	static int last_msg = -1;
+
+	if (last_msg != std::get<0>(msg))
 	{
-		printf("%d: %s\n", std::get<0>(msg), std::get<1>(msg));
-	}
-	if (log_level < 2)
-	{
-		dbprint("%d: %s", std::get<0>(msg), std::get<1>(msg));
+		last_msg = std::get<0>(msg);
+		if (log_level > 0)
+		{
+			printf("%d: %s\n", std::get<0>(msg), std::get<1>(msg));
+		}
+		if (log_level < 2)
+		{
+			dbprint("%d: %s", std::get<0>(msg), std::get<1>(msg));
+		}
+		mMsgBox(std::get<2>(msg), L"ERROR", 20000);
 	}
 }

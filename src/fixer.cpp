@@ -68,8 +68,9 @@ double phase1(double p1, bool is_stable)
 inline
 void phase0(double p1)
 {
-	if (state.p0 > p1 && state.p0 > state.reset_thr) // reset on entering
+	if (state.p0 > p1 && state.reset_thr > state.p0) // reset on entering
 	{
+		printf("p0: %lf state.reset_thr: %lf\n", state.p0, state.reset_thr);
 		dprintf("resetting\n");
 		reset_state();
 	}
@@ -158,7 +159,7 @@ void serial_read(std::vector<PortInfo> pi)
 			{
 				// dprintf("Error double authorization\n");
 				dprintf(msg<0>());
-				serial_port.readlines(max_line_sz, suffix); // deny given data
+				serial_port.readline(max_line_sz, suffix); // deny given data
 				continue;
 			}
 
@@ -189,6 +190,8 @@ void serial_read(std::vector<PortInfo> pi)
 					state.min_weight = (double)*rs->getInt(1);
 					state.corr = (double)*rs->getInt(2);
 					state.com = serial_port.getPort();
+					dprintf("min_weight: %lf\ncorr: %lf\ncom: %s\n",
+							state.min_weight, state.corr, state.com.c_str());
 					authorized = true;
 				}
 				else
@@ -217,7 +220,9 @@ void serial_read(std::vector<PortInfo> pi)
 
 bool init_fixer(const char *ini_filename)
 {
+	setlocale(LC_ALL, "Russian");
 	Settings set = read_settings(ini_filename, state);
+	init_interface();			// for async msg boxes
 	if (!init_db(set, odbc_env, cars_db, store_db, store_info_db, debug_db))
 	{
 		return false;

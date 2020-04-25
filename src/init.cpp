@@ -27,7 +27,8 @@ bool init_db(Settings set, odbc::EnvironmentRef &odbc_env,
 			";PWD=" + set.cars.pwd;
 
 		cars_db->connect(cars_conn_str.c_str());
-
+		printf("carsdb established connection\n");
+		
 		store_db = odbc_env->createConnection();
 		// const char *store_conn_str = "DRIVER={PostgreSQL ANSI}; SERVER=localhost; PORT=5432; DATABASE=store; UID=postgres; PWD=root;";
 		std::string store_conn_str = "DRIVER={PostgreSQL ANSI};"
@@ -38,6 +39,7 @@ bool init_db(Settings set, odbc::EnvironmentRef &odbc_env,
 			";PWD=" + set.store.pwd;
 		
 		store_db->connect(store_conn_str.c_str());
+		printf("storedb established connection\n");
 
 		store_info_db = odbc_env->createConnection();
 		// const char *store_info_conn_str = "DRIVER={PostgreSQL ANSI}; SERVER=localhost; PORT=5432; DATABASE=store_info; UID=postgres; PWD=root;";
@@ -49,6 +51,7 @@ bool init_db(Settings set, odbc::EnvironmentRef &odbc_env,
 			";PWD=" + set.store_info.pwd;
 
 		store_info_db->connect(store_info_conn_str.c_str());
+		printf("store_infodb established connection\n");
 
 		debug_db = odbc_env->createConnection();
 		// const char *cars_conn_str = "DRIVER={PostgreSQL ANSI}; SERVER=localhost; PORT=5432; DATABASE=cars; UID=postgres; PWD=root;";
@@ -60,10 +63,11 @@ bool init_db(Settings set, odbc::EnvironmentRef &odbc_env,
 			";PWD=" + set.debug.pwd;
 
 		debug_db->connect(debug_conn_str.c_str());
+		printf("debugdb established connection\n");
 	}
 	catch (const odbc::Exception &e)
 	{
-		dprintf("Error while connecting to dbs:\n\t%s", e.what());
+		printf("Error while connecting to dbs:\n\t%s", e.what());
 		return false;
 	}
 	return true;
@@ -82,12 +86,35 @@ std::string path_to_ini(std::string ini_filename)
 Settings read_settings(const char *ini_filename, State &state)
 {
 	std::string ini_path = path_to_ini(ini_filename);
-	dprintf("Path to ini:\n\t%s\n", ini_path.c_str());
+	printf("Path to ini:\n\t%s\n", ini_path.c_str());
 	inipp::Ini<char> ini;
 	std::ifstream is(ini_path);
 	ini.parse(is);
 
 	Settings set;
+
+	if (ini.sections.find("DEBUG") != std::end(ini.sections))
+	{
+		debug = true;
+		for (auto it = std::begin(ini.sections["DEBUG"]); it != std::end(ini.sections["DEBUG"]); ++it)
+		{
+			std::stringstream is(it->second);
+			if (it->first == "LogLevel")
+			{
+				is >> log_level;
+				if (log_level > 0)
+					CreateConsole();
+
+				if (log_level > 3)
+				{
+					log_level = DEFAULT_LOG_LEVEL;
+					printf("Invalid log_level.\nSet to default (%d)\n", log_level);
+				}
+			}
+		} 
+	}
+
+
 	for (auto it = std::begin(ini.sections["DEFAULT"]); it != std::end(ini.sections["DEFAULT"]); ++it)
 	{
 		std::istringstream iss{ it->second };
@@ -110,12 +137,12 @@ Settings read_settings(const char *ini_filename, State &state)
 		else if (it->first == "reset_thr")
 		{
 			iss >> state.reset_thr;
-			dprintf("reset_thr set to %lf\n", state.reset_thr);
+			printf("\treset_thr set to %lf\n", state.reset_thr);
 		}
 		else if (it->first == "store_diff")
 		{
 			iss >> state.store_diff;
-			dprintf("store_diff set to %lf\n", state.store_diff);
+			printf("\tstore_diff set to %lf\n", state.store_diff);
 		}
 		else if (it->first == "suffix")
 		{
@@ -127,12 +154,12 @@ Settings read_settings(const char *ini_filename, State &state)
 				suffix = "\r\n";
 			else
 				suffix = iss.str();
-			printf("Suffix used : %s", suffix.c_str());
+			printf("\tsuffix: %s\n", suffix.c_str());
 		}
 		else
 		{
-			dprintf("unkonwn option is %s ignored\n", it->first.c_str());
-			dprintf(msg<4>());
+			printf("unkonwn option is %s ignored\n", it->first.c_str());
+			// dprintf(msg<4>());
 		}
 	}
 
@@ -157,10 +184,11 @@ Settings read_settings(const char *ini_filename, State &state)
 				case 57600:
 				case 115200:
 					pi.baudrate = baudrate;
+					printf("\tbaudrate: %zu\n", pi.baudrate);
 					break;
 
 				default:
-					dprintf("%s: Baudrate %u is unusual\n", pi.name.c_str(), (pi.baudrate = baudrate));
+					printf("%s: Baudrate %u is unusual\n", pi.name.c_str(), (pi.baudrate = baudrate));
 			}
 		}
 		
@@ -173,10 +201,11 @@ Settings read_settings(const char *ini_filename, State &state)
 				case 7:
 				case 8:
 					pi.bytesize = static_cast<serial::bytesize_t>(bytesize);
+					printf("\tbytesize: %zu\n", bytesize);
 					break;
 
 				default:
-					dprintf("%s: Invalid bytesize %u. Available [5-8] values. Set to default %u.", pi.name.c_str(), bytesize, static_cast<unsigned int>(pi.bytesize));
+					printf("%s: Invalid bytesize %u. Available [5-8] values. Set to default %u.", pi.name.c_str(), bytesize, static_cast<unsigned int>(pi.bytesize));
 			}
 		}
 
@@ -185,43 +214,25 @@ Settings read_settings(const char *ini_filename, State &state)
 			if (parity == "even")
 			{
 				pi.parity = serial::parity_t::parity_even;
+				printf("\tparity: even\n");
 			}
 			else if (parity == "odd")
 			{
 				pi.parity = serial::parity_t::parity_odd;
+				printf("\tparity: odd\n");
 			}
 			else if (parity == "none")
 			{
 				pi.parity = serial::parity_t::parity_none;
+				printf("\tparity: none\n");
 			}
 			else
 			{
-				dprintf("%s: Invalid parity value %s. Available \"even\", \"odd\", \"none\". Set to default \"none\"\n", pi.name.c_str(), parity.c_str());
+				printf("%s: Invalid parity value %s. Available \"even\", \"odd\", \"none\". Set to default \"none\"\n", pi.name.c_str(), parity.c_str());
 			}
 		}
 
 		set.pi.push_back(pi);
-	}
-
-	if (ini.sections.find("DEBUG") != std::end(ini.sections))
-	{
-		debug = true;
-		for (auto it = std::begin(ini.sections["DEBUG"]); it != std::end(ini.sections["DEBUG"]); ++it)
-		{
-			std::stringstream is(it->second);
-			if (it->first == "LogLevel")
-			{
-				is >> log_level;
-				if (log_level > 0)
-					CreateConsole();
-
-				if (log_level > 3)
-				{
-					log_level = DEFAULT_LOG_LEVEL;
-					dprintf("Invalid log_level.\nSet to default (%d)\n", log_level);
-				}
-			}
-		}
 	}
 	return set;
 }
