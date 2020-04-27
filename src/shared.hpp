@@ -37,15 +37,18 @@ extern odbc::ConnectionRef debug_db;
 
 
 template<typename ...Args> inline
-void dbprint(const char *fmt, Args&& ...args)
+void dbprint(const char *fmt, int code, Args&& ...args)
 {
 	try
 	{
 		static std::array<char, 1024> buf;
 		buf.fill('\0');			// zero buf
-		snprintf(buf.data(), std::size(buf) - 1, fmt, args...);
-		auto ps = debug_db->prepareStatement("INSERT INTO debug(code, message) VALUES(-1, ?)");
-		ps->setCString(1, buf.data());
+		snprintf(buf.data(), std::size(buf) - 1, fmt, code, args...);
+		auto ps = debug_db->prepareStatement("INSERT INTO debug(code, message) VALUES(?, ?)"
+											 "ON CONFLICT (id) DO UPDATE SET "
+											 "id=EXCLUDED.id, code=EXCLUDED.code, message=EXCLUDED.message, ts=EXCLUDED.ts");
+		ps->setInt(1, code);
+		ps->setCString(2, buf.data());
 		ps->executeUpdate();
 	}
 	catch (const odbc::Exception &e)
@@ -64,7 +67,7 @@ void dprintf(const char *fmt, Args&& ...args)
 	}
 	if (log_level < 2)
 	{
-		dbprint(fmt, std::forward<Args>(args)...);
+		dbprint(fmt, -1, std::forward<Args>(args)...);
 	}
 }
 

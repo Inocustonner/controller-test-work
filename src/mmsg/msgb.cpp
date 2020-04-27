@@ -21,7 +21,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR pwCmdLi
 	HANDLE h;
 	wchar_t *_;
 	unsigned int ms = wcstol(argv[2], &_, 10);
-	CreateTimerQueueTimer(&h, NULL, (WAITORTIMERCALLBACK)die, nullptr, 1000, 0, WT_EXECUTEDEFAULT);
+	CreateTimerQueueTimer(&h, NULL, (WAITORTIMERCALLBACK)die, nullptr, ms, 0, WT_EXECUTEDEFAULT);
 
 	printf("displayinh.\n");
 	MessageBoxW(NULL,

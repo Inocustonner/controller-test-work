@@ -14,11 +14,12 @@ constexpr std::array code_msg =
 	MSG(0, "Error: double authorization\n",	"Ошибка: двойная авторизация"),
 	// MSG(1, "Error: Unauthorized driver\n",		"Ошибка водитель не авторизован"),
 	MSG(1, "Error: Unauthorized driver\n",		"Ошибка: не авторизованный водитель"),
-	MSG(2, "Error: Invalid barcode\n",			"Ошибка: не верный формат штрихкода"),
+	MSG(2, "Error: Invalid barcode\n",			"Ошибка: не верный формат штрих кода"),
 	MSG(3, "Com port connecting error\n",		"Ошибка: подключения com port'a"),
 	MSG(4, "Unknown option ignored\n",			"Ошибка: неизвестная опция проигнорирована"),
 	MSG(5, "Error while writing to a db\n",	"Ошибка: во время записи в базу данных"),
-	MSG(6, "Error while reading from a db\n",	"Ошибка: во время обращения к базе данных")
+	MSG(6, "Error while reading from a db\n",	"Ошибка: во время обращения к базе данных"),
+	MSG(7, "Error driver not found\n",			"Ошибка: водитель не найден")
 };
 
 

@@ -197,6 +197,7 @@ void serial_read(std::vector<PortInfo> pi)
 				else
 				{
 					std::string e = "cars_db returned nothing for id=" + state.id;
+					dprintf(msg<7>());
 					throw std::exception(e.c_str());
 				}
 			}
