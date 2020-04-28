@@ -1,6 +1,7 @@
 #include "shared.hpp"
 #include "init.hpp"
 #include "fixer.h"
+#include "lights.hpp"
 
 #include <string_view>
 #include <thread>
@@ -29,6 +30,7 @@ inline
 void reset_state()
 {
 	state = State{};
+	state.min_weight = state.reset_thr;
 	authorized = false;
 }
 
@@ -89,6 +91,8 @@ double fix(double p1, bool is_stable)
 		}
 		else
 		{
+			if (get_last_light_enum() == LightsEnum::ACCEPT) light(LightsEnum::WAIT);
+
 			state.phase = 1;
 			ret_value = phase1(p1, is_stable);
 		}
@@ -160,6 +164,7 @@ void serial_read(std::vector<PortInfo> pi)
 				// dprintf("Error double authorization\n");
 				dprintf(msg<0>());
 				serial_port.readline(max_line_sz, suffix); // deny given data
+				light(LightsEnum::DENY);
 				continue;
 			}
 
@@ -172,6 +177,7 @@ void serial_read(std::vector<PortInfo> pi)
 				if (!is_barcode_valid(barcode))
 				{
 					dprintf(msg<2>());
+					light(LightsEnum::DENY);
 					continue;
 				}
 				state.id = barcode;
@@ -193,12 +199,16 @@ void serial_read(std::vector<PortInfo> pi)
 					dprintf("min_weight: %lf\ncorr: %lf\ncom: %s\n",
 							state.min_weight, state.corr, state.com.c_str());
 					authorized = true;
+
+					light(LightsEnum::ACCEPT);
 				}
 				else
 				{
 					std::string e = "cars_db returned nothing for id=" + state.id;
 					dprintf(msg<7>());
 					throw std::exception(e.c_str());
+
+					light(LightsEnum::DENY);
 				}
 			}
 			catch (const std::exception &e)
@@ -230,7 +240,8 @@ bool init_fixer(const char *ini_filename)
 	}
 
 	reset_state();
-	
+	light(LightsEnum::WAIT);
+
 	reader_thread = std::thread(serial_read, set.pi);
 	reader_thread.detach();
 	return true;

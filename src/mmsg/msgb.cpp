@@ -15,7 +15,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR pwCmdLi
 	if (argc != 3)
 	{
 		MessageBox(NULL, TEXT("ERROR"), TEXT("Invalid number of arguments"), 0);
-		//return 0;
+		return 0;
 	}
 
 	HANDLE h;

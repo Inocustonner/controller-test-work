@@ -14,16 +14,20 @@
 
 struct State
 {
-	double reset_thr				= 15000.0; // the value on scalars below what do reset
-	double store_diff				= 200.0;   // if difference between values on scalars  equals store_diff store those values
+	double reset_thr					= 15000.0; // the value on scalars below what do reset
+	double store_diff					= 200.0;   // if difference between values on scalars  equals store_diff store those values
 
-	double min_weight				= 1000.0;	// set on read_serial. Value after what apply correction
+	double min_weight					= 1000.0;	// set on read_serial. Value after what apply correction
 	double corr						= 0.0;		// correction value
-	int event_id					= 0;
-	double p0						= 0.0;		// previous value on scalars
-	int phase						= 0;		// current phase
+	int event_id						= 0;
+	double p0							= 0.0;		// previous value on scalars
+	int phase							= 0;		// current phase
 	std::string id					= "";		// car ident
 	std::string com					= "";
+
+	std::string lights_wait_cmd		= "";	
+	std::string lights_acc_cmd		= "";
+	std::string lights_deny_cmd		= "";
 };
 
 

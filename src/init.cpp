@@ -7,6 +7,9 @@
 
 #define DEFAULT_LOG_LEVEL 1
 extern std::string suffix;
+extern std::string lights_wait_cmd;
+extern std::string lights_acc_cmd;
+extern std::string lights_deny_cmd;
 
 bool init_db(Settings set, odbc::EnvironmentRef &odbc_env,
 			 odbc::ConnectionRef &cars_db,
@@ -161,6 +164,19 @@ Settings read_settings(const char *ini_filename, State &state)
 			printf("unkonwn option is %s ignored\n", it->first.c_str());
 			// dprintf(msg<4>());
 		}
+	}
+
+	if (ini.sections.find("LIGHTS") != std::end(ini.sections))
+	{
+		auto& lights_map = ini.sections["LIGHTS"];
+
+		lights_wait_cmd	= lights_map["ConsoleWait"];
+		lights_acc_cmd	= lights_map["ConsoleAccept"];
+		lights_deny_cmd	= lights_map["ConsoleDeny"];
+	}
+	else
+	{
+		fprintf(stderr, "No lights commands found!!!\n");
 	}
 
 	for (auto it = std::begin(ini.sections["COM"]); it != std::end(ini.sections["COM"]); ++it)
