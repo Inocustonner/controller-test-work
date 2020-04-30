@@ -22,6 +22,8 @@ constexpr std::array code_msg =
 	MSG(7, "Error driver not found\n",			"Ошибка: водитель не найден")
 };
 
+#pragma warning(push)
+#pragma warning(disable : 4715)
 
 template<int code>
 constexpr msg_t msg(void)
@@ -32,3 +34,4 @@ constexpr msg_t msg(void)
 	for (const auto tup : code_msg)
 		if (std::get<0>(tup) == code) return tup;
 }
+#pragma warning(pop)
