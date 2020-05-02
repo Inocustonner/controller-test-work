@@ -1,6 +1,7 @@
 #include "State.hpp"
 #include "Output.hpp"
 #include "Databases.hpp"
+#include "Init.hpp"
 
 #include <cstdlib>
 
@@ -50,5 +51,6 @@ double fix(const double p1, const bool is_stable)
 
 bool init_fixer(const char *ini_filename)
 {
+	init_settings();
 	return true;
 }

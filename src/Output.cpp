@@ -10,8 +10,13 @@
 #include <cstdio>
 #include <cstdarg>
 
-static int log_lvl = 0;
+static int log_lvl = default_log_lvl;
 static odbc::ConnectionRef log_db;
+
+int get_log_lvl()
+{
+	return log_lvl;
+}
 
 
 void set_log_lvl(const int lvl)
@@ -20,7 +25,7 @@ void set_log_lvl(const int lvl)
 }
 
 
-void set_log_db(odbc::ConnectionRef&& new_log_db)
+void set_log_db(odbc::ConnectionRef&& new_log_db) noexcept
 {
 	log_db = std::move(new_log_db);
 }
