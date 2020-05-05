@@ -1,9 +1,13 @@
 #include "Init.hpp"
 #include "State.hpp"
 #include "Output.hpp"
+#include "Databases.hpp"
 
 #include <inipp.h>
 #include <dllInjLib/dllInj.h>	// CreateConsole
+#include <odbc/Connection.h>
+#include <odbc/Environment.h>
+#include <odbc/Exception.h>
 
 #include <type_traits>
 #include <optional>
@@ -104,6 +108,7 @@ static void default_section(Section_Map& default_map, Settings& setts) noexcept
 		>> debug.db >> debug.uid >> debug.pwd;	
 }
 
+
 static void com_section(Section_Map& com_map, Settings& setts)
 {
 	for (auto it = std::cbegin(com_map); it != std::cend(com_map); ++it)
@@ -127,6 +132,7 @@ static void com_section(Section_Map& com_map, Settings& setts)
 		setts.pi_v.push_back(pi);
 	}
 }
+
 
 const Settings init_settings()
 {
@@ -156,5 +162,47 @@ const Settings init_settings()
 	{
 		com_section(ini.sections.find("COM")->second, setts);
 	}
-	return {};
+	return setts;
+}
+
+
+inline
+static odbc::ConnectionRef create_connection(const DB_Auth& auth) noexcept
+{
+	constexpr char driver_str[] = "DRIVER={PostgreSQL ANSI}";
+	constexpr char server_str[] = ";SERVER=";
+	constexpr char port_str[] = ";PORT=";
+	constexpr char db_str[] = ";DATABASE=";
+	constexpr char uid_str[] = ";UID=";
+	constexpr char pwd_str[] = ";PWD=";
+
+	const std::string conn_str = driver_str +
+		(server_str + auth.host) +
+		port_str + auth.port +
+		db_str + auth.db +
+		uid_str + auth.uid +
+		pwd_str + auth.pwd;
+
+	try
+	{
+		odbc::ConnectionRef conn = get_odbc_env()->createConnection();
+		conn->connect(conn_str.c_str());
+	}
+	catch (odbc::Exception &e)
+	{
+		dprintf("Fatal error creating odbc connection %s\n", e.what());
+		dprintf(msg<4>());
+		if (get_log_lvl())
+			system("pause");
+		exit(0);
+	}
+}
+
+
+void init_databases(const std::array<DB_Auth, DB_CNT>& dbi_a) noexcept
+{
+	set_cars_db(create_connection(dbi_a[static_cast<int>(DBEnum::Cars)]));
+	set_store_db(create_connection(dbi_a[static_cast<int>(DBEnum::Store)]));
+	set_store_info_db(create_connection(dbi_a[static_cast<int>(DBEnum::Store_Info)]));
+	set_cars_db(create_connection(dbi_a[static_cast<int>(DBEnum::Debug)]));
 }

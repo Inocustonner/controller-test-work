@@ -1,6 +1,9 @@
 /bin
 /obj
 /tmp
+GTAGS
+GPATH
+GRTAGS
 build*
 *.txt
 !CMakeLists.txt

@@ -51,6 +51,7 @@ double fix(const double p1, const bool is_stable)
 
 bool init_fixer(const char *ini_filename)
 {
-	init_settings();
+	const Settings setts = init_settings();
+	init_databases(setts.dbi_a);
 	return true;
 }

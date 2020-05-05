@@ -41,5 +41,5 @@ struct Settings
 	std::string suffix = "";
 };
 
-bool init_databases(const std::array<DB_Auth, DB_CNT>& dbi_a);
 const Settings init_settings();
+void init_databases(const std::array<DB_Auth, DB_CNT>& dbi_a) noexcept;

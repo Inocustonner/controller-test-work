@@ -1,11 +1,15 @@
 #include "Databases.hpp"
 #include "Output.hpp"
 
+#include <odbc/Environment.h>
 #include <odbc/Connection.h>
 #include <odbc/Exception.h>
 #include <odbc/PreparedStatement.h>
 
-static odbc::ConnectionRef store_db;
+static odbc::EnvironmentRef env = odbc::Environment::create();
+static odbc::ConnectionRef  store_db;
+static odbc::ConnectionRef  store_info_db;
+static odbc::ConnectionRef  cars_db;
 
 void store(const char *com, const char *id,
 	int event_id, int corr_weight, int inp_weight) noexcept
@@ -28,7 +32,26 @@ void store(const char *com, const char *id,
 	}
 }
 
+
 void set_store_db(odbc::ConnectionRef&& new_store_db)
 {
-	store_db = std::move(new_store_db);
+	store_db = new_store_db;
+}
+
+
+void set_store_info_db(odbc::ConnectionRef&& new_store_info_db)
+{
+	store_db = new_store_info_db;
+}
+
+
+void set_cars_db(odbc::ConnectionRef&& new_cars_db)
+{
+	cars_db = new_cars_db;
+}
+
+
+odbc::EnvironmentRef get_odbc_env()
+{
+	return env;
 }
