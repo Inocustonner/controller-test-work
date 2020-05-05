@@ -106,7 +106,26 @@ static void default_section(Section_Map& default_map, Settings& setts) noexcept
 
 static void com_section(Section_Map& com_map, Settings& setts)
 {
-	
+	for (auto it = std::cbegin(com_map); it != std::cend(com_map); ++it)
+	{
+		Port_Info pi = { it->first };
+		std::istringstream is(it->second);
+		std::string parity;
+		is >> pi.baudrate >> pi.byte_size >>parity;
+
+		if (pi.byte_size < 5 || pi.byte_size > 8)
+			dprintf("Invalid byte size %d. Byte size set to %d", pi.byte_size, pi.byte_size = 8);
+
+		if (parity == "even")
+			pi.parity = parity_t::parity_even;
+		else if (parity == "odd")
+			pi.parity = parity_t::parity_odd;
+		else if (parity == "none" || parity == "")
+			pi.parity = parity_t::parity_none;
+		else
+			dprintf("Unknown parity. Parity set to 'none'.\n");
+		setts.pi_v.push_back(pi);
+	}
 }
 
 const Settings init_settings()
