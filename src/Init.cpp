@@ -2,6 +2,7 @@
 #include "State.hpp"
 #include "Output.hpp"
 #include "Databases.hpp"
+#include "Lights.hpp"
 
 #include <inipp.h>
 #include <dllInjLib/dllInj.h>	// CreateConsole
@@ -103,7 +104,7 @@ static void default_section(Section_Map& default_map, Settings& setts) noexcept
 		>> store_info.db >> store_info.uid >> store_info.pwd;
 
 	iss = std::istringstream(get(default_map, "debugdb", ""));
-	DB_Auth& debug = setts.dbi_a[static_cast<int>(DBEnum::Store_Info)];
+	DB_Auth& debug = setts.dbi_a[static_cast<int>(DBEnum::Debug)];
 	iss >> debug.host >> debug.port
 		>> debug.db >> debug.uid >> debug.pwd;	
 }
@@ -134,14 +135,24 @@ static void com_section(Section_Map& com_map, Settings& setts)
 }
 
 
+static void lights_section(Section_Map& lgt_map)
+{
+	inv_if(lgt_map, "ConsoleWait",
+		[](auto& pair_str){ set_light_wait(pair_str->second); });
+
+	inv_if(lgt_map, "ConsoleDeny",
+		[](auto& pair_str){ set_light_deny(pair_str->second); });
+
+	inv_if(lgt_map, "ConsoleAccept",
+		[](auto& pair_str){ set_light_acc(pair_str->second); });
+}
+
+
 const Settings init_settings()
 {
 	constexpr auto ini_name = "ini.ini";
 	const std::string path_to_ini = get_module_dir() + ini_name;
-	CreateConsole();
 
-	dprintf("ini path:\n\t%s\n", path_to_ini.c_str());
-	
 	// constexpr std::array ini_sections = { "DEFAULT", "COM", "DEBUG" };
 	Settings setts = {};
 	inipp::Ini<char> ini;
@@ -153,6 +164,12 @@ const Settings init_settings()
 		debug_section(ini.sections.find("DEBUG")->second);
 	}
 
+	// to avoid writing to not yet connected debug db
+	auto prev_log_level = get_log_lvl();
+	set_log_lvl(2);
+
+	dprintf("ini path:\n\t%s\n", path_to_ini.c_str());
+
 	if (ini.sections.contains("DEFAULT"))
 	{
 		default_section(ini.sections.find("DEFAULT")->second, setts);
@@ -162,11 +179,18 @@ const Settings init_settings()
 	{
 		com_section(ini.sections.find("COM")->second, setts);
 	}
+
+	if (ini.sections.contains("LIGHTS"))
+	{
+		lights_section(ini.sections.find("LIGHTS")->second);
+	}
+
+	set_log_lvl(prev_log_level);
+
 	return setts;
 }
 
 
-inline
 static odbc::ConnectionRef create_connection(const DB_Auth& auth) noexcept
 {
 	constexpr char driver_str[] = "DRIVER={PostgreSQL ANSI}";
@@ -187,6 +211,7 @@ static odbc::ConnectionRef create_connection(const DB_Auth& auth) noexcept
 	{
 		odbc::ConnectionRef conn = get_odbc_env()->createConnection();
 		conn->connect(conn_str.c_str());
+		return conn;
 	}
 	catch (odbc::Exception &e)
 	{
@@ -198,11 +223,10 @@ static odbc::ConnectionRef create_connection(const DB_Auth& auth) noexcept
 	}
 }
 
-
 void init_databases(const std::array<DB_Auth, DB_CNT>& dbi_a) noexcept
 {
-	set_cars_db(create_connection(dbi_a[static_cast<int>(DBEnum::Cars)]));
-	set_store_db(create_connection(dbi_a[static_cast<int>(DBEnum::Store)]));
-	set_store_info_db(create_connection(dbi_a[static_cast<int>(DBEnum::Store_Info)]));
-	set_cars_db(create_connection(dbi_a[static_cast<int>(DBEnum::Debug)]));
+	get_cars_db() = create_connection(dbi_a[static_cast<int>(DBEnum::Cars)]);
+	get_store_db() = create_connection(dbi_a[static_cast<int>(DBEnum::Store)]);
+	get_store_info_db() = create_connection(dbi_a[static_cast<int>(DBEnum::Store_Info)]);
+	get_log_db() = create_connection(dbi_a[static_cast<int>(DBEnum::Debug)]);
 }

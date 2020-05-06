@@ -2,7 +2,10 @@
 #include "Output.hpp"
 #include "Databases.hpp"
 #include "Init.hpp"
+#include "Reader.hpp"
+#include "Lights.hpp"
 
+#include <thread>
 #include <cstdlib>
 
 inline
@@ -12,7 +15,7 @@ double phase1(const double p1, const bool id_stable)
 
 	if (std::abs(p1 - state.p0) > store_diff)
 	{
-		store(state.com.c_str(), state.id.c_str(), state.event_id,
+		store(state.com.c_str(), state.id.c_str(),
 			static_cast<int>(corr_weight), static_cast<int>(p1));
 	}
 	return corr_weight;
@@ -39,6 +42,9 @@ double fix(const double p1, const bool is_stable)
 			phase0(p1);
 		else
 			ret_value = phase1(p1, is_stable);
+
+		if (get_last_light() == LightsEnum::Acc)
+			light(LightsEnum::Wait);
 	}
 	else if (p1 > reset_thr)
 	{
@@ -53,5 +59,7 @@ bool init_fixer(const char *ini_filename)
 {
 	const Settings setts = init_settings();
 	init_databases(setts.dbi_a);
+	std::thread th(com_reader, setts.pi_v, setts.suffix);
+	th.detach();
 	return true;
 }

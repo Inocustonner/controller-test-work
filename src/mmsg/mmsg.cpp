@@ -90,7 +90,7 @@ static void run_proc(const wchar_t *exe, wchar_t *arg_line)
 }
 
 
-void mMsgBox(const wchar_t *title, const wchar_t *body, unsigned int msElapse)
+void mMsgBox(const wchar_t *body, const wchar_t *title, unsigned int msElapse)
 {
 	static const wchar_t* exe_name = L"msgb.exe";
 	wchar_t buffer[1024] = {};

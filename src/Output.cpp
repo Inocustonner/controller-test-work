@@ -1,4 +1,5 @@
 #include "Output.hpp"
+#include "mmsg/mmsg.hpp"
 
 // https://github.com/SAP/odbc-cpp-wrapper
 #include <odbc/Connection.h>
@@ -25,11 +26,16 @@ void set_log_lvl(const int lvl)
 }
 
 
-void set_log_db(odbc::ConnectionRef&& new_log_db) noexcept
-{
-	log_db = std::move(new_log_db);
-}
+// void set_log_db(odbc::ConnectionRef new_log_db) noexcept
+// {
+// 	log_db = new_log_db;
+// }
 
+
+odbc::ConnectionRef& get_log_db()
+{
+	return log_db;
+}
 
 template<typename ...Args>
 static const char* make_buf(const char *fmt, Args&& ...args) noexcept
@@ -57,9 +63,9 @@ static void dblog(int code, const char* str) noexcept
 {
 	try
 	{
-		auto ps = log_db->prepareStatement("INSERT INTO debug(code, message) VALUES(?, ?)"
-			"ON CONFLICT (id) DO UPDATE SET "
-			"id=EXCLUDED.id, code=EXCLUDED.code, message=EXCLUDED.message, ts=EXCLUDED.ts");
+		auto ps = log_db->prepareStatement("INSERT INTO debug(code, message) VALUES(?, ?)");
+			//"ON CONFLICT (id) DO UPDATE SET "
+			//"id=EXCLUDED.id, code=EXCLUDED.code, message=EXCLUDED.message, ts=EXCLUDED.ts");
 		ps->setInt(1, code);
 		ps->setCString(2, str);
 		ps->executeUpdate();
@@ -69,7 +75,7 @@ static void dblog(int code, const char* str) noexcept
 		if (log_lvl > 0)
 			printf("Error while storing to debug db:\n\t%s", e.what());
 		else
-			;					// throw message box
+			mMsgBox(std::get<2>(msg<6>()), L"ERROR", 20000);					// throw message box
 	}
 
 }
@@ -92,10 +98,18 @@ void dprintf(const char *fmt, ...)
 
 void dprintf(const msg_t msg)
 {
+	static int prev_code;
 	// const char* str = make_buf("%s", std::get<1>);
 	if (log_lvl > 0)
 		fprintf(stderr, "%s\n", std::get<1>(msg));
-	if (log_lvl < 2)
-		dblog(std::get<0>(msg), std::get<1>(msg));
+	if (std::get<0>(msg) != prev_code)
+	{
+		if (log_lvl < 2) // avoid multiple writing to db
+		{
+			dblog(std::get<0>(msg), std::get<1>(msg));
+		}
+		mMsgBox(std::get<2>(msg), L"ERROR", 20000);
+	}
+	prev_code = std::get<0>(msg);
 	// msgbox
 }
