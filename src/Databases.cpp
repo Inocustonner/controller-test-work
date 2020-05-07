@@ -46,22 +46,24 @@ static void inc_event_id()
 }
 
 
-void store_info(const char* com, const char *barcode)
+void store_info(const char* com, const char* barcode, const char* gn, const char* driver_id)
 {
 	inc_event_id();
-	auto ps = store_info_db->prepareStatement("INSERT INTO info VALUES(?, ?, ?)"\
+
+	auto ps = store_info_db->prepareStatement("INSERT INTO info(event_id, com, barcode, gn) VALUES(?, ?, ?, ?)"\
 		"ON CONFLICT (event_id) DO UPDATE SET "
 		"event_id=EXCLUDED.event_id, com=EXCLUDED.com, barcode=EXCLUDED.barcode, ts=CURRENT_TIMESTAMP");
 	ps->setInt(1, state.event_id);
 	ps->setCString(2, com);
 	ps->setCString(3, barcode);
+	ps->setCString(4, gn);
 	ps->executeUpdate();
 }
 
 
 odbc::ResultSetRef select_from_cars()
 {
-	odbc::PreparedStatementRef ps = cars_db->prepareStatement("SELECT weight, corr FROM cars_table WHERE id=?");
+	odbc::PreparedStatementRef ps = cars_db->prepareStatement("SELECT weight, corr, gn FROM cars_table WHERE id=?");
 	ps->setString(1, state.id);
 	return ps->executeQuery();
 }

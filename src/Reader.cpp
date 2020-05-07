@@ -28,6 +28,21 @@ bool is_barcode_valid(std::string_view barcode)
 }
 
 
+std::vector<std::string> splitBy(std::string& s, char delim)
+{
+    size_t pos = 0, ppos = 0;
+    std::vector<std::string> vec;
+    while ((pos = s.find(delim, ppos)) != std::string::npos)
+	{
+        std::string token = s.substr(ppos, pos - ppos);
+        vec.push_back(token);
+        ppos = pos + 1;
+    }
+    vec.push_back(s.substr(ppos, std::string::npos));
+    return vec;
+}
+
+
 void com_reader(std::vector<Port_Info> pi_v, const std::string suffix)
 {
 	std::vector<serial::Serial> ports(std::size(pi_v));
@@ -66,15 +81,16 @@ void com_reader(std::vector<Port_Info> pi_v, const std::string suffix)
 					light(LightsEnum::Deny);
 					continue;
 				}
-
-				state.id = barcode;
+				const std::vector barvec = splitBy(barcode, '#');
+				state.id = barvec[1];
+				const std::string driver_id = barvec[2];
 
 				odbc::ResultSetRef rs = select_from_cars();
 
 				if (rs->next())
 				{
 					// save info about authorization
-					store_info(serial_port.getPort().c_str(), barcode.c_str());
+					store_info(serial_port.getPort().c_str(), barcode.c_str(), rs->getString(3)->c_str(), driver_id.c_str());
 
 					state.min_weight = (double)*rs->getInt(1);
 
@@ -82,8 +98,8 @@ void com_reader(std::vector<Port_Info> pi_v, const std::string suffix)
 					if (0 < corr && corr < 100)
 					{
 						corr = 1.0 + corr / 100;
-						state.corr = [corr_k=corr](double inp) -> double
-									 { return inp * corr_k; };
+						state.corr = [mw=state.min_weight, corr_k=corr](double inp) -> double
+									 { return (inp - mw) * corr_k; };
 					}
 					else
 					{
