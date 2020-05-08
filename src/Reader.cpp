@@ -90,7 +90,8 @@ void com_reader(std::vector<Port_Info> pi_v, const std::string suffix)
 				if (rs->next())
 				{
 					// save info about authorization
-					store_info(serial_port.getPort().c_str(), barcode.c_str(), rs->getString(3)->c_str(), driver_id.c_str());
+					std::string gn = *rs->getString(3);
+					store_info(serial_port.getPort().c_str(), barcode.c_str(), gn.c_str(), driver_id.c_str());
 
 					state.min_weight = (double)*rs->getInt(1);
 

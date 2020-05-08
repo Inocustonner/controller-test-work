@@ -3,8 +3,6 @@
 #include <array>
 #include <vector>
 
-constexpr auto DB_CNT = 4; // cars, store, store_info, debug
-
 struct DB_Auth
 {
 	std::string host, port, db, uid, pwd;
@@ -31,8 +29,11 @@ enum class DBEnum
 	Cars = 0,
 	Store = 1,
 	Store_Info = 2,
-	Debug = 3
+	Debug = 3,
+	Drivers = 4,
 };
+constexpr auto DB_CNT = 5; // cars, store, store_info, debug
+
 
 struct Settings
 {

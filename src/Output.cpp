@@ -104,7 +104,7 @@ void dprintf(const msg_t msg)
 		fprintf(stderr, "%s\n", std::get<1>(msg));
 	if (std::get<0>(msg) != prev_code)
 	{
-		if (log_lvl < 2) // avoid multiple writing to db
+		if (log_lvl < 2 && log_db->connected()) // avoid multiple writing to db
 		{
 			dblog(std::get<0>(msg), std::get<1>(msg));
 		}

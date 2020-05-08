@@ -12,6 +12,7 @@ static odbc::EnvironmentRef env = odbc::Environment::create();
 static odbc::ConnectionRef  store_db;
 static odbc::ConnectionRef  store_info_db;
 static odbc::ConnectionRef  cars_db;
+static odbc::ConnectionRef  drivers_db;
 
 void store(const char* com, const char* id,
 	int corr_weight, int inp_weight) noexcept
@@ -50,14 +51,30 @@ void store_info(const char* com, const char* barcode, const char* gn, const char
 {
 	inc_event_id();
 
-	auto ps = store_info_db->prepareStatement("INSERT INTO info(event_id, com, barcode, gn) VALUES(?, ?, ?, ?)"\
-		"ON CONFLICT (event_id) DO UPDATE SET "
-		"event_id=EXCLUDED.event_id, com=EXCLUDED.com, barcode=EXCLUDED.barcode, ts=CURRENT_TIMESTAMP");
-	ps->setInt(1, state.event_id);
-	ps->setCString(2, com);
-	ps->setCString(3, barcode);
-	ps->setCString(4, gn);
-	ps->executeUpdate();
+	auto ps = drivers_db->prepareStatement("SELECT fio FROM drivers WHERE id=?");
+	ps->setCString(1, driver_id);
+	auto res_ref = ps->executeQuery();
+
+	if (res_ref->next())
+	{
+		std::string fio = *res_ref->getString(1);
+		ps = store_info_db->prepareStatement(
+			"INSERT INTO info(event_id, com, barcode, gn, fio) VALUES(?, ?, ?, ?, ?)"
+			"ON CONFLICT (event_id) DO UPDATE SET "
+			"event_id=EXCLUDED.event_id, com=EXCLUDED.com, barcode=EXCLUDED.barcode,"
+			"gn=EXCLUDED.gn, fio=EXCLUDED.fio, ts=CURRENT_TIMESTAMP");
+
+		ps->setInt(1, state.event_id);
+		ps->setCString(2, com);
+		ps->setCString(3, barcode);
+		ps->setCString(4, gn);
+		ps->setCString(5, fio.c_str());
+		ps->executeUpdate();
+	}
+	else
+	{
+		dprintf("Failed to find driver with id = %s\n", driver_id);
+	}
 }
 
 
@@ -102,6 +119,12 @@ odbc::ConnectionRef& get_store_info_db()
 odbc::ConnectionRef& get_cars_db()
 {
 	return cars_db;
+}
+
+
+odbc::ConnectionRef& get_drivers_db()
+{
+	return drivers_db;
 }
 
 

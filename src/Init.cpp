@@ -106,7 +106,12 @@ static void default_section(Section_Map& default_map, Settings& setts) noexcept
 	iss = std::istringstream(get(default_map, "debugdb", ""));
 	DB_Auth& debug = setts.dbi_a[static_cast<int>(DBEnum::Debug)];
 	iss >> debug.host >> debug.port
-		>> debug.db >> debug.uid >> debug.pwd;	
+		>> debug.db >> debug.uid >> debug.pwd;
+
+	iss = std::istringstream(get(default_map, "driversdb", ""));
+	DB_Auth& drivers = setts.dbi_a[static_cast<int>(DBEnum::Drivers)];
+	iss >> drivers.host >> drivers.port
+		>> drivers.db >> drivers.uid >> drivers.pwd;
 }
 
 
@@ -229,4 +234,5 @@ void init_databases(const std::array<DB_Auth, DB_CNT>& dbi_a) noexcept
 	get_store_db() = create_connection(dbi_a[static_cast<int>(DBEnum::Store)]);
 	get_store_info_db() = create_connection(dbi_a[static_cast<int>(DBEnum::Store_Info)]);
 	get_log_db() = create_connection(dbi_a[static_cast<int>(DBEnum::Debug)]);
+	get_drivers_db() = create_connection(dbi_a[static_cast<int>(DBEnum::Drivers)]);
 }

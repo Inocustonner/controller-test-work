@@ -12,5 +12,6 @@ void store_info(const char* com, const char* barcode, const char* gn, const char
 odbc::ConnectionRef& get_store_db();
 odbc::ConnectionRef& get_store_info_db();
 odbc::ConnectionRef& get_cars_db();
+odbc::ConnectionRef& get_drivers_db();
 
 odbc::EnvironmentRef get_odbc_env();
