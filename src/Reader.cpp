@@ -22,9 +22,9 @@ void pause_exit()
 }
 
 
-bool is_barcode_valid(std::string_view barcode)
+bool is_barcode_valid(std::vector<std::string> barvec)
 {
-	return true;
+	return barvec.size() == 4;
 }
 
 
@@ -74,14 +74,15 @@ void com_reader(std::vector<Port_Info> pi_v, const std::string suffix)
 				std::string barcode = serial_port.readline(max_line_sz, suffix);
 
 				barcode.pop_back();	// remove suffix
+				const std::vector barvec = splitBy(barcode, '#');
+
 				dprintf("\n%s: read %s\n", serial_port.getPort().c_str(), barcode.c_str());
-				if (!is_barcode_valid(barcode))
+				if (!is_barcode_valid(barvec))
 				{
 					dprintf(msg<2>());
 					light(LightsEnum::Deny);
 					continue;
 				}
-				const std::vector barvec = splitBy(barcode, '#');
 				state.id = barvec[1];
 				const std::string driver_id = barvec[2];
 
@@ -128,7 +129,7 @@ void com_reader(std::vector<Port_Info> pi_v, const std::string suffix)
 			{
 				dprintf("Exception while processing com input %s\n\n", e.what());
 				dprintf(msg<6>());
-				pause_exit();
+				//pause_exit();
 			}
 		}
 	}

@@ -19,7 +19,9 @@ constexpr std::array code_msg =
 	MSG(4, "Unknown option ignored\n",			"Ошибка: неизвестная опция проигнорирована"),
 	MSG(5, "Error while writing to a db\n",	"Ошибка: во время записи в базу данных"),
 	MSG(6, "Error while reading from a db\n",	"Ошибка: во время обращения к базе данных"),
-	MSG(7, "Error driver not found\n",			"Ошибка: водитель не найден")
+	MSG(7, "Error car id not found\n",			"Ошибка: машина в датабазе не найдена"),
+	MSG(8, "Error driver not found\n",			"Ошибка: водитель не найден в датабазе")
+
 };
 
 #pragma warning(push)

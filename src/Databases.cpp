@@ -74,6 +74,7 @@ void store_info(const char* com, const char* barcode, const char* gn, const char
 	else
 	{
 		dprintf("Failed to find driver with id = %s\n", driver_id);
+		dprintf(msg<8>());
 	}
 }
 
