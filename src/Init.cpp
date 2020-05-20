@@ -4,6 +4,7 @@
 #include "Databases.hpp"
 #include "Lights.hpp"
 
+#include <Encode.hpp>
 #include <inipp.h>
 #include <dllInjLib/dllInj.h>	// CreateConsole
 #include <odbc/Connection.h>
@@ -162,7 +163,18 @@ const Settings init_settings()
 	Settings setts = {};
 	inipp::Ini<char> ini;
 	std::ifstream is(path_to_ini);
-	ini.parse(is);
+	std::stringstream ss;
+	try
+	{
+		decode(ss, is);
+	}
+	catch (std::exception& e)
+	{
+		dprintf(msg<9>());
+		exit(1);
+	}
+
+	ini.parse(ss);
 
 	if (ini.sections.contains("DEBUG"))
 	{

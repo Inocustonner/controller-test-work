@@ -20,8 +20,9 @@ constexpr std::array code_msg =
 	MSG(5, "Error while writing to a db\n",	"Ошибка: во время записи в базу данных"),
 	MSG(6, "Error while reading from a db\n",	"Ошибка: во время обращения к базе данных"),
 	MSG(7, "Error car id not found\n",			"Ошибка: машина в датабазе не найдена"),
-	MSG(8, "Error driver not found\n",			"Ошибка: водитель не найден в датабазе")
-
+	MSG(8, "Error driver not found\n",			"Ошибка: водитель не найден в датабазе"),
+	MSG(9, "Error decoding ini file\n",         "Ошибка: не удалось расшифровать фаил настроек"),
+	MSG(10, "Error connecting to db\n", 		"Ошибка: не удалось подключиться к одной из баз данных"),
 };
 
 #pragma warning(push)
