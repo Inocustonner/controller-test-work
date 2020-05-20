@@ -5,7 +5,7 @@
 
 struct DB_Auth
 {
-	std::string host, port, db, uid, pwd;
+	std::string conn_str;
 };
 
 enum class parity_t

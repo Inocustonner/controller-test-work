@@ -89,30 +89,20 @@ static void default_section(Section_Map& default_map, Settings& setts) noexcept
 	else
 		dprintf("Custom suffix:\n\t%s", setts.suffix.c_str());
 
-	std::istringstream iss(get(default_map, "carsdb", ""));
 	DB_Auth& cars = setts.dbi_a[static_cast<int>(DBEnum::Cars)];
-	iss >> cars.host >> cars.port
-		>> cars.db >> cars.uid >> cars.pwd;
+	cars.conn_str = get(default_map, "carsdb", "");
 
-	iss = std::istringstream(get(default_map, "storedb", ""));
 	DB_Auth& store = setts.dbi_a[static_cast<int>(DBEnum::Store)];
-	iss >> store.host >> store.port
-		>> store.db >> store.uid >> store.pwd;
+	store.conn_str = get(default_map, "storedb", "");
 
-	iss = std::istringstream(get(default_map, "store_infodb", ""));
 	DB_Auth& store_info = setts.dbi_a[static_cast<int>(DBEnum::Store_Info)];
-	iss >> store_info.host >> store_info.port
-		>> store_info.db >> store_info.uid >> store_info.pwd;
+	store_info.conn_str = get(default_map, "store_infodb", "");
 
-	iss = std::istringstream(get(default_map, "debugdb", ""));
 	DB_Auth& debug = setts.dbi_a[static_cast<int>(DBEnum::Debug)];
-	iss >> debug.host >> debug.port
-		>> debug.db >> debug.uid >> debug.pwd;
+	debug.conn_str = get(default_map, "debugdb", "");
 
-	iss = std::istringstream(get(default_map, "driversdb", ""));
 	DB_Auth& drivers = setts.dbi_a[static_cast<int>(DBEnum::Drivers)];
-	iss >> drivers.host >> drivers.port
-		>> drivers.db >> drivers.uid >> drivers.pwd;
+	drivers.conn_str = get(default_map, "driversdb", "");
 }
 
 
@@ -210,24 +200,10 @@ const Settings init_settings()
 
 static odbc::ConnectionRef create_connection(const DB_Auth& auth) noexcept
 {
-	constexpr char driver_str[] = "DRIVER={PostgreSQL ANSI}";
-	constexpr char server_str[] = ";SERVER=";
-	constexpr char port_str[] = ";PORT=";
-	constexpr char db_str[] = ";DATABASE=";
-	constexpr char uid_str[] = ";UID=";
-	constexpr char pwd_str[] = ";PWD=";
-
-	const std::string conn_str = driver_str +
-		(server_str + auth.host) +
-		port_str + auth.port +
-		db_str + auth.db +
-		uid_str + auth.uid +
-		pwd_str + auth.pwd;
-
 	try
 	{
 		odbc::ConnectionRef conn = get_odbc_env()->createConnection();
-		conn->connect(conn_str.c_str());
+		conn->connect(auth.conn_str.c_str());
 		return conn;
 	}
 	catch (odbc::Exception &e)
