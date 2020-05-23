@@ -1,5 +1,6 @@
-#include <sstream>
-using CharT = char;
-
-void encode(std::basic_ostream<CharT>& os, std::basic_istream<CharT>& src_stream);
-void decode(std::basic_ostream<CharT>& os, std::basic_istream<CharT>& src_stream);
+#include <cstdio>
+#include <string>
+// fp file ptr with write attr
+void fencode(FILE* fp, std::string& src);
+// fp file ptr with read attr
+void fdecode(std::string& dst, FILE* fp);

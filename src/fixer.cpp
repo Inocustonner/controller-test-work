@@ -25,7 +25,9 @@ double phase1(const double p1, const bool id_stable)
 inline
 void phase0(const double p1)
 {
-	if (state.p0 > p1 && reset_thr > state.p0)
+	if (state.p0 > p1 
+		&& state.p0 > reset_thr 
+		&& reset_thr > p1)
 	{
 		dprintf("resetting\n");
 		reset_state();

@@ -152,19 +152,21 @@ const Settings init_settings()
 	// constexpr std::array ini_sections = { "DEFAULT", "COM", "DEBUG" };
 	Settings setts = {};
 	inipp::Ini<char> ini;
-	std::ifstream is(path_to_ini);
-	std::stringstream ss;
+	FILE* fp = fopen(path_to_ini.c_str(), "rb");
+	std::string ss;
 	try
 	{
-		decode(ss, is);
+		fdecode(ss, fp);
 	}
 	catch (std::exception& e)
 	{
+		fclose(fp);
 		dprintf(msg<9>());
 		exit(1);
 	}
+	fclose(fp);
 
-	ini.parse(ss);
+	ini.parse(std::stringstream(ss));
 
 	if (ini.sections.contains("DEBUG"))
 	{
@@ -218,9 +220,9 @@ static odbc::ConnectionRef create_connection(const DB_Auth& auth) noexcept
 
 void init_databases(const std::array<DB_Auth, DB_CNT>& dbi_a) noexcept
 {
+	get_log_db() = create_connection(dbi_a[static_cast<int>(DBEnum::Debug)]);
 	get_cars_db() = create_connection(dbi_a[static_cast<int>(DBEnum::Cars)]);
 	get_store_db() = create_connection(dbi_a[static_cast<int>(DBEnum::Store)]);
 	get_store_info_db() = create_connection(dbi_a[static_cast<int>(DBEnum::Store_Info)]);
-	get_log_db() = create_connection(dbi_a[static_cast<int>(DBEnum::Debug)]);
 	get_drivers_db() = create_connection(dbi_a[static_cast<int>(DBEnum::Drivers)]);
 }

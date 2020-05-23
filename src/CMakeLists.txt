@@ -16,14 +16,16 @@ add_library(controller SHARED dllmain.cpp
 	Init.cpp 
 	Reader.cpp 
 	SerialPool.cpp
-	Lights.cpp)
+	Lights.cpp
+	
+	encoding/Encode.cpp
+	encoding/MD5.cpp)
 	
 target_link_libraries(controller serial.lib 
 								 dllInj.lib 
 								 ODBC::ODBC 
 								 odbccpp_static.lib 
-								 Ws2_32.lib
-								 encode.lib								 
+								 Ws2_32.lib							 
 								 mmsg)
 								 
 set_property(TARGET controller PROPERTY
