@@ -1,4 +1,4 @@
-include_directories("${CMAKE_SOURCE_DIR}/include")
+include_directories(${ProjI})
 
 add_library(mmsg STATIC mmsg.cpp)
 

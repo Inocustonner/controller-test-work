@@ -89,8 +89,8 @@ void dprintf(const char *fmt, ...)
 	const char* str = make_buf(fmt, vl);
 	if (log_lvl > 0)
 		fprintf(stderr, "%s", str);
-	if (log_lvl < 2 && log_db->connected())
-		dblog(-1, str);
+	//if (log_lvl < 2 && log_db->connected())
+		//dblog(-1, str);
 
 	va_end(vl);
 }

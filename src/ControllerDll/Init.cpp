@@ -4,6 +4,8 @@
 #include "Databases.hpp"
 #include "Lights.hpp"
 
+#include <Control.hpp>
+
 #include <Encode.hpp>
 #include <inipp.h>
 #include <dllInjLib/dllInj.h>	// CreateConsole
@@ -14,9 +16,10 @@
 #include <type_traits>
 #include <optional>
 #include <iostream>
-#include <fstream>
+#include <cstdlib>
 
 #include <Windows.h>
+#undef CreateEvent
 using Section_Map = inipp::Ini<char>::Section;
 using Sections_Map = inipp::Ini<char>::Sections;
 static std::string get_module_dir() noexcept
@@ -196,33 +199,78 @@ const Settings init_settings()
 
 	set_log_lvl(prev_log_level);
 
+	Control::OpenShared();
+	Control::OpenEventMain();
+	Control::OpenEventDb();
+	Control::OpenEventDebug();
+
 	return setts;
 }
 
 
-static odbc::ConnectionRef create_connection(const DB_Auth& auth) noexcept
-{
-	try
-	{
-		odbc::ConnectionRef conn = get_odbc_env()->createConnection();
-		conn->connect(auth.conn_str.c_str());
-		return conn;
-	}
-	catch (odbc::Exception &e)
-	{
-		dprintf("Fatal error creating odbc connection %s\n", e.what());
-		dprintf(msg<4>());
-		if (get_log_lvl())
-			system("pause");
-		exit(0);
-	}
-}
+// static odbc::ConnectionRef create_connection(const DB_Auth& auth) noexcept
+// {
+// 	try
+// 	{
+// 		odbc::ConnectionRef conn = get_odbc_env()->createConnection();
+// 		conn->connect(auth.conn_str.c_str());
+// 		return conn;
+// 	}
+// 	catch (odbc::Exception &e)
+// 	{
+// 		dprintf("Fatal error creating odbc connection %s\n", e.what());
+// 		dprintf(msg<4>());
+// 		if (get_log_lvl())
+// 			system("pause");
+// 		exit(0);
+// 	}
+// }
 
-void init_databases(const std::array<DB_Auth, DB_CNT>& dbi_a) noexcept
+// void init_databases(const std::array<DB_Auth, DB_CNT>& dbi_a) noexcept
+// {
+// 	get_log_db() = create_connection(dbi_a[static_cast<int>(DBEnum::Debug)]);
+// 	get_cars_db() = create_connection(dbi_a[static_cast<int>(DBEnum::Cars)]);
+// 	get_store_db() = create_connection(dbi_a[static_cast<int>(DBEnum::Store)]);
+// 	get_store_info_db() = create_connection(dbi_a[static_cast<int>(DBEnum::Store_Info)]);
+// 	get_drivers_db() = create_connection(dbi_a[static_cast<int>(DBEnum::Drivers)]);
+// }
+
+
+void init_databases(const std::array<DB_Auth, DB_CNT>& dbi_a)
 {
-	get_log_db() = create_connection(dbi_a[static_cast<int>(DBEnum::Debug)]);
-	get_cars_db() = create_connection(dbi_a[static_cast<int>(DBEnum::Cars)]);
-	get_store_db() = create_connection(dbi_a[static_cast<int>(DBEnum::Store)]);
-	get_store_info_db() = create_connection(dbi_a[static_cast<int>(DBEnum::Store_Info)]);
-	get_drivers_db() = create_connection(dbi_a[static_cast<int>(DBEnum::Drivers)]);
+	Control::syncDebug();
+	command_s* cmd_p = Control::get_command();
+	cmd_p->cmd = Cmd::InitDb;
+	data_s* data_p = Control::next_data(nullptr);
+
+	int i = static_cast<int>((DBEnum)(0)); // DBEnum iterator knda
+	for (const DB_Auth& auth : dbi_a)
+	{
+		data_p->size = sizeof(int);
+		data_p->type = DataType::Int;
+		*reinterpret_cast<int*>(data_p->body()) = i++;
+		data_p = Control::next_data(data_p);
+
+		data_p->type = DataType::Str;
+		data_p->size = std::size(auth.conn_str) + 1;
+		std::memcpy(data_p->body(), auth.conn_str.c_str(), data_p->size);
+		data_p = Control::next_data(data_p);
+	}
+	data_p->size = 0;
+	// wait untill dbs connected
+	Control::SetEventMain();
+	Control::syncDb();
+
+	if (cmd_p->cmd != Cmd::Done)
+	{
+		data_p = Control::next_data(nullptr);
+		assert(data_p->type == DataType::Str);
+ 		dprintf(msg<4>());
+		if (get_log_lvl())
+		{
+			printf("Fatal error creating odbc connection %s\n", );
+			system("pause");
+		}
+ 		exit(0);
+	}
 }
