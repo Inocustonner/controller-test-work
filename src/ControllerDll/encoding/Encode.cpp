@@ -1,33 +1,12 @@
 #include "MD5.h"
 #include <Encode.hpp>
-#include <WinReg.hpp>
 
 #include <string_view>
 #include <cassert>
+#include <Windows.h>
 // https://stackoverflow.com/questions/11131353/regopenkeyex-reggetvalue-return-error-file-not-found-on-keys-that-exist
 const std::wstring key_path = L"SOFTWARE\\Controller";
 const std::wstring value_name = L"pwd";
-
-static auto getx64Flag()
-{
-#ifdef _WIN32
-	USHORT pproc, _;
-	if (IsWow64Process2(GetCurrentProcess(), &pproc, &_))
-	{
-		if (pproc == IMAGE_FILE_MACHINE_UNKNOWN)
-			return 0; 
-		else
-			return KEY_WOW64_64KEY; // if 32bit running under 64bit
-	}
-	else
-	{
-		// 32bit?
-		return 0;
-	}
-#else
-	return 0;
-#endif
-}
 
 std::wstring comp_name()
 {
@@ -59,16 +38,9 @@ void xors (std::string& str, const std::wstring_view opr)
 
 void dencode(std::string& str)
 {
-#ifdef _WIN32
-winreg::RegKey key(HKEY_LOCAL_MACHINE, key_path, KEY_ALL_ACCESS | getx64Flag());
-	//winreg::RegKey key(HKEY_LOCAL_MACHINE, key_path, KEY_ALL_ACCESS | KEY_WOW64_64KEY);
-	//key.Open(HKEY_LOCAL_MACHINE, key_path, KEY_ALL_ACCESS | KEY_WOW64_64KEY);
-#else
-	winreg::RegKey key(HKEY_LOCAL_MACHINE, key_path);
-	//key.Open(HKEY_LOCAL_MACHINE, key_path);
-#endif
-	std::wstring pwd = key.GetStringValue(value_name);
-	xors(str, pwd);
+	static const char *pwd =  "c9c99bb56be6e9831fa19244e40fe56750c95928681f6df44e3bbaf08ecd53fc6b86b273ff34fce19d6b804eff5a3f5747ada4eaa22f1d49c01e52ddb7875b4b\0";
+	static const wchar_t *pwd_w = reinterpret_cast<const wchar_t*>(pwd);
+	xors(str, pwd_w);
 }
 
 // only works for caret in the beggining
@@ -104,7 +76,7 @@ void fdecode(std::string& dst, FILE* fp)
 	assert(fp);
 	constexpr size_t md5len = 32;
 	const size_t size = fsize(fp) - md5len - 1;
-
+	
 	std::string hash;
 	hash.resize(md5len + 1);
 	size_t rs = fread(hash.data(), 1, md5len + 1, fp);
@@ -112,13 +84,11 @@ void fdecode(std::string& dst, FILE* fp)
 		throw std::runtime_error("Failed to read hash");
 
 	hash.pop_back();
-
+	
 	dst.resize(size);
-
 	rs = fread(dst.data(), 1, size, fp);
-
 	assert(rs == size);
-
+	
 	dencode(dst);
 	if (MD5(dst).hexdigest() != hash)
 		throw std::runtime_error("Hash is invalid");

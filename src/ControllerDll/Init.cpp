@@ -238,7 +238,9 @@ const Settings init_settings()
 
 void init_databases(const std::array<DB_Auth, DB_CNT>& dbi_a)
 {
+#ifdef __DEBUG__
 	Control::syncDebug();
+#endif
 	command_s* cmd_p = Control::get_command();
 	cmd_p->cmd = Cmd::InitDb;
 	data_s* data_p = Control::next_data(nullptr);
@@ -260,15 +262,13 @@ void init_databases(const std::array<DB_Auth, DB_CNT>& dbi_a)
 	// wait untill dbs connected
 	Control::SetEventMain();
 	Control::syncDb();
-
 	if (cmd_p->cmd != Cmd::Done)
 	{
 		data_p = Control::next_data(nullptr);
-		assert(data_p->type == DataType::Str);
- 		dprintf(msg<4>());
+ 		//dprintf(msg<4>());
 		if (get_log_lvl())
 		{
-			printf("Fatal error creating odbc connection %s\n", );
+			printf("Fatal error creating odbc connection %s\n", reinterpret_cast<const char*>(data_p->body()));
 			system("pause");
 		}
  		exit(0);

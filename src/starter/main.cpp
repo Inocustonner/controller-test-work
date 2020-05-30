@@ -46,8 +46,9 @@ int main()
 
 		Control::CreateEventMain();
 		Control::CreateEventDb();
+#ifdef __DEBUG__
 		Control::CreateEventDebug();
-
+#endif
 		std::tuple tup = start_proc("ControllerFree_v.3.2.exe");
 		thread_hs.push_back(std::get<0>(tup));
 		handles.push_back(std::get<1>(tup));
@@ -61,6 +62,9 @@ int main()
 		std::cerr << e.what() << '\n';
 		system("pause");
 	}
+#ifdef __DEBUG__
+	Control::SetEventDebug();
+#endif
 	WaitForMultipleObjects(std::size(thread_hs), thread_hs.data(), FALSE, INFINITE);
 
 	TerminateThread(thread_hs[0], 0);

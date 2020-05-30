@@ -1,6 +1,7 @@
 #include "Databases.hpp"
 #include "Output.hpp"
 #include "State.hpp"
+#include "Control.hpp"
 
 #include <odbc/Environment.h>
 #include <odbc/Connection.h>
@@ -79,13 +80,27 @@ void store_info(const char* com, const char* barcode, const char* gn, const char
 }
 
 
-odbc::ResultSetRef select_from_cars()
-{
-	odbc::PreparedStatementRef ps = cars_db->prepareStatement("SELECT weight, corr, gn FROM cars_table WHERE id=?");
-	ps->setString(1, state.id);
-	return ps->executeQuery();
-}
+// odbc::ResultSetRef select_from_cars()
+// {
+// 	odbc::PreparedStatementRef ps = cars_db->prepareStatement("SELECT weight, corr, gn FROM cars_table WHERE id=?");
+// 	ps->setString(1, state.id);
+// 	return ps->executeQuery();
+// }
 
+data_s* select_from_cars()
+{
+	command_s* cmd_p = Control::get_command();
+	data_s* data_p = Control::next_data(nullptr);
+
+	cmd_p->cmd = Cmd::Read_Cars;
+	data_p->type = DataType::Str;
+	data_p->size = std::size(state.id) + 1;
+	std::memcpy(data_p->body(), state.id.c_str(), data_p->size);
+
+	Control::SetEventMain();
+	Control::syncDb();
+	return Control::next_data(nullptr);
+}
 
 // void set_cars_db(odbc::ConnectionRef new_cars_db)
 // {

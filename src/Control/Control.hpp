@@ -4,13 +4,14 @@ enum class Cmd : int
 	// ExecQuery,
 	// UpdQuery,
 
-	Store,
-	Store_Info,
+	Store_Store,
+	Store_Store_Info,
 	Read_Cars,
-	Read_Drivers,
 
 	Done,
-	Err
+	Err,
+
+	Exit
 };
 
 

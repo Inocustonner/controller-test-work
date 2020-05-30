@@ -86,9 +86,9 @@ void com_reader(std::vector<Port_Info> pi_v, const std::string suffix)
 				state.id = barvec[1];
 				const std::string driver_id = barvec[2];
 
-				odbc::ResultSetRef rs = select_from_cars();
+				data_s* data_p = select_from_cars();
 
-				if (rs->next())
+				/*if (rs->next())
 				{
 					// save info about authorization
 					std::string gn = *rs->getString(3);
@@ -123,7 +123,7 @@ void com_reader(std::vector<Port_Info> pi_v, const std::string suffix)
 					throw std::exception(e.c_str());
 
 					// light deny
-				}
+				}*/
 			}
 			catch (const std::exception& e)
 			{
