@@ -21,19 +21,24 @@
 
 #include <iostream>
 #include <string>
+#include <cstdarg>
 
 static command_s* command_p;
 
 static odbc::EnvironmentRef env = odbc::Environment::create();
 static std::array<odbc::ConnectionRef, DB_CNT> conn_a;
 
-struct DbGuard
+std::string assemble_query(const char* query, ...)
 {
-	~DbGuard()
-	{
-		Control::SetEventDb();
-	}
-};
+    constexpr int max_query_size = 65536;
+    static char query_buffer[max_query_size];
+
+    va_list vl;
+    va_start(vl, query);
+    int len = vsprintf_s(query_buffer, sizeof(query_buffer), query, vl);
+    va_end(vl);
+    return std::string(query_buffer, len);
+}
 
 
 static void write_error(const char* err)
@@ -78,12 +83,11 @@ void cars()
 {
 	try
 	{
-		odbc::PreparedStatementRef ps = conn_a[static_cast<int>(DBEnum::Cars)]->prepareStatement("SELECT weight, corr, gn FROM cars_table WHERE id=?");
 		data_s* data_p = Control::next_data(nullptr);
 		assert(data_p->type == DataType::Str);
-		const std::string str = reinterpret_cast<const char*>(data_p->body());
-		ps->setCString(1, str.c_str());
-		
+		odbc::PreparedStatementRef ps 
+			= conn_a[static_cast<int>(DBEnum::Cars)]->prepareStatement(
+				assemble_query("SELECT weight, corr, gn FROM cars_table WHERE id='%s'", reinterpret_cast<const char*>(data_p->body())));
 		odbc::ResultSetRef res_ref = ps->executeQuery();
 
 		if (res_ref->next())
@@ -124,27 +128,28 @@ void cars()
 
 static void store()
 {
-	odbc::PreparedStatementRef ps = conn_a[static_cast<int>(DBEnum::Store)]->prepareStatement("INSERT INTO info (com, event_id, id, weight, inp_weight) VALUES(?, ?, ?, ?, ?)");
-
 	data_s* data_p = Control::next_data(nullptr);
 	assert(data_p->type == DataType::Str);
-	ps->setCString(1, reinterpret_cast<const char*>(data_p->body()));
+	const char* com_cstr = reinterpret_cast<const char*>(data_p->body());
 
 	data_p = Control::next_data(data_p);
 	assert(data_p->type == DataType::Int);
-	ps->setInt(2, *reinterpret_cast<int*>(data_p->body()));
+	int event_id = *reinterpret_cast<int*>(data_p->body());
 
 	data_p = Control::next_data(data_p);
 	assert(data_p->type == DataType::Str);
-	ps->setCString(3, reinterpret_cast<const char*>(data_p->body()));
+	const char* id_cstr = reinterpret_cast<const char*>(data_p->body());
 
 	data_p = Control::next_data(data_p);
 	assert(data_p->type == DataType::Int);
-	ps->setInt(4, *reinterpret_cast<int*>(data_p->body()));
+	int weight = *reinterpret_cast<int*>(data_p->body());
 
 	data_p = Control::next_data(data_p);
 	assert(data_p->type == DataType::Int);
-	ps->setInt(5, *reinterpret_cast<int*>(data_p->body()));
+	int inp_weight = *reinterpret_cast<int*>(data_p->body());
+
+	odbc::PreparedStatementRef ps = conn_a[static_cast<int>(DBEnum::Store)]->prepareStatement(
+		assemble_query("INSERT INTO info (com, event_id, id, weight, inp_weight) VALUES('%s', %d, '%s', %d, %d)", com_cstr, event_id, id_cstr, weight, inp_weight);
 
 	try
 	{
@@ -192,29 +197,24 @@ static void store_info()
 		{
 			std::string fio = *res_ref->getString(1);
 
+			data_p = Control::next_data(data_p);
+			assert(data_p->type == DataType::Str);
+			const char* com_cstr = reinterpret_cast<const char*>(data_p->body());
+
+			data_p = Control::next_data(data_p);
+			assert(data_p->type == DataType::Str);
+			const char* barcode_cstr = reinterpret_cast<const char*>(data_p->body());
+
+			data_p = Control::next_data(data_p);
+			assert(data_p->type == DataType::Str);
+			const char* gn_cstr = reinterpret_cast<const char*>(data_p->body());
+
 			ps = conn_a[static_cast<int>(DBEnum::Store_Info)]->prepareStatement(
-			"INSERT INTO info(event_id, com, barcode, gn, fio) VALUES(?, ?, ?, ?, ?)"
-			"ON CONFLICT (event_id) DO UPDATE SET "
-			"event_id=EXCLUDED.event_id, com=EXCLUDED.com, barcode=EXCLUDED.barcode,"
-			"gn=EXCLUDED.gn, fio=EXCLUDED.fio, ts=CURRENT_TIMESTAMP");
-
-			ps->setInt(1, event_id);
-
-			data_p = Control::next_data(data_p);
-			assert(data_p->type == DataType::Str);
-			ps->setCString(2, reinterpret_cast<const char*>(data_p->body()));
-
-			data_p = Control::next_data(data_p);
-			assert(data_p->type == DataType::Str);
-			ps->setCString(3, reinterpret_cast<const char*>(data_p->body()));
-
-			data_p = Control::next_data(data_p);
-			assert(data_p->type == DataType::Str);
-			ps->setCString(4, reinterpret_cast<const char*>(data_p->body()));
-
-			data_p = Control::next_data(data_p);
-			assert(data_p->type == DataType::Str);
-			ps->setCString(5, reinterpret_cast<const char*>(data_p->body()));
+				assemble_query(
+					"INSERT INTO info(event_id, com, barcode, gn, fio) VALUES(%d, '%s', '%s', '%s, '%s)"
+					"ON CONFLICT (event_id) DO UPDATE SET "
+					"event_id=EXCLUDED.event_id, com=EXCLUDED.com, barcode=EXCLUDED.barcode,"
+					"gn=EXCLUDED.gn, fio=EXCLUDED.fio, ts=CURRENT_TIMESTAMP", event_id, com_cstr, barcode_cstr, gn_cstr, fio.c_str()));
 
 			ps->executeUpdate();
 
