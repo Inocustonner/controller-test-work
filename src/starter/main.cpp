@@ -67,17 +67,19 @@ int main()
 #endif
 	WaitForMultipleObjects(std::size(thread_hs), thread_hs.data(), FALSE, INFINITE);
 
-	TerminateThread(thread_hs[0], 0);
-	CloseHandle(thread_hs[0]);
-	CloseHandle(handles[0]);
-
-	TerminateThread(thread_hs[1], 0);
-	CloseHandle(thread_hs[1]);
-	CloseHandle(handles[1]);
-	//to resume thread if he is waiting for an event
+	Control::get_command()->cmd = Cmd::Exit;
 	Control::SetEventMain();
 	Control::SetEventDb();
 	Control::SetEventDebug();
+
+	CloseHandle(thread_hs[0]);
+	CloseHandle(handles[0]);
+
+	CloseHandle(thread_hs[1]);
+	CloseHandle(handles[1]);
+	//to resume thread if he is waiting for an event
+
+
 
 	Control::RemoveShared();
 	Control::CloseEvents();

@@ -45,8 +45,8 @@ double fix(const double p1, const bool is_stable)
 		else
 			ret_value = phase1(p1, is_stable);
 
-		if (get_last_light() == LightsEnum::Acc)
-			light(LightsEnum::Wait);
+	/*	if (get_last_light() == LightsEnum::Acc)
+			light(LightsEnum::Wait);*/
 	}
 	else if (p1 > reset_thr)
 	{

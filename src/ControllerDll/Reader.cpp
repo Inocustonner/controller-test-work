@@ -5,6 +5,7 @@
 #include "Databases.hpp"
 #include "SerialPool.hpp"
 #include "Lights.hpp"
+#include "Control.hpp"
 
 // https://github.com/SAP/odbc-cpp-wrapper
 #include <odbc/Connection.h>
@@ -12,6 +13,7 @@
 #include <odbc/ResultSet.h>
 #include <odbc/Exception.h>
 
+#include <myassert.hpp>
 
 inline
 void pause_exit()
@@ -87,31 +89,33 @@ void com_reader(std::vector<Port_Info> pi_v, const std::string suffix)
 				const std::string driver_id = barvec[2];
 
 				data_s* data_p = select_from_cars();
-
-				/*if (rs->next())
+				if (data_p)
 				{
-					// save info about authorization
-					std::string gn = *rs->getString(3);
-					store_info(serial_port.getPort().c_str(), barcode.c_str(), gn.c_str(), driver_id.c_str());
+					massert(data_p->type == DataType::Int);
+					state.min_weight = static_cast<double>(*reinterpret_cast<int*>(data_p->body()));
 
-					state.min_weight = (double)*rs->getInt(1);
+					data_p = Control::next_data(data_p);
+					massert(data_p->type == DataType::Int);
+					double tmp_corr = static_cast<double>(*reinterpret_cast<int*>(data_p->body()));
 
-					double corr = (double)*rs->getInt(2);
-					if (0 < corr && corr < 100)
+					if (0 < tmp_corr && tmp_corr < 100)
 					{
-						corr = 1.0 + corr / 100;
-						state.corr = [mw=state.min_weight, corr_k=corr](double inp) -> double
-									 { return (inp - mw) * corr_k; };
+						tmp_corr = 1.0 + tmp_corr / 100;
+						state.corr = [mw = state.min_weight, corr_k = tmp_corr](double inp) -> double
+						{ return (inp - mw) * corr_k; };
 					}
 					else
 					{
-						state.corr = [corr=corr](double inp) -> double
-									 { return inp + corr; };
+						state.corr = [corr = tmp_corr](double inp) -> double
+						{ return inp + corr; };
 					}
 
+					data_p = Control::next_data(data_p);
+					massert(data_p->type == DataType::Str);
+					std::string gn = reinterpret_cast<const char*>(data_p->body());
+
 					state.com = serial_port.getPort();
-					dprintf("min_weight: %lf\ncom: %s\n\n",
-						state.min_weight, state.com.c_str());
+					store_info(serial_port.getPort().c_str(), barcode.c_str(), gn.c_str(), driver_id.c_str());
 					set_authorized();
 
 					light(LightsEnum::Acc);
@@ -123,7 +127,8 @@ void com_reader(std::vector<Port_Info> pi_v, const std::string suffix)
 					throw std::exception(e.c_str());
 
 					// light deny
-				}*/
+					light(LightsEnum::Deny);
+				}
 			}
 			catch (const std::exception& e)
 			{

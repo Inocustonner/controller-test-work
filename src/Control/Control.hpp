@@ -50,7 +50,7 @@ namespace Control
 	void RemoveShared();
 
 	command_s* get_command();
-	data_s* next_data(data_s* data_p);
+	data_s* next_data(data_s* data_p = nullptr);
 
 	void CreateEventMain();
 	void CreateEventDb();
