@@ -1,5 +1,6 @@
 #include "Output.hpp"
 #include "mmsg/mmsg.hpp"
+#include <Control.hpp>
 
 // https://github.com/SAP/odbc-cpp-wrapper
 #include <odbc/Connection.h>

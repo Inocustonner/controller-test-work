@@ -1,7 +1,7 @@
 #include "Databases.hpp"
 #include "Output.hpp"
 #include "State.hpp"
-#include "Control.hpp"
+#include <Control.hpp>
 
 #include <myassert.hpp>
 
@@ -58,6 +58,7 @@ void write_int_to_data(data_s* data_p, int i)
 void store(const char* com, const char* id,
 	int corr_weight, int inp_weight)
 {
+	lockMutexStore();
 	command_s* cmd_p = Control::get_command();
 	cmd_p->cmd = Cmd::Store_Store;
 
@@ -75,7 +76,7 @@ void store(const char* com, const char* id,
 
 	data_p = Control::next_data(data_p);
 	write_int_to_data(data_p, inp_weight);
-
+	releaseMutexStore();
 	Control::SetEventMain();
 	// how to check errors?
 }

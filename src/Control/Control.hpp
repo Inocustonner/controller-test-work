@@ -6,6 +6,7 @@ enum class Cmd : int
 
 	Store_Store,
 	Store_Store_Info,
+	Store_Debug,
 	Read_Cars,
 
 	Done,
@@ -62,6 +63,9 @@ namespace Control
 
 	void OpenEventDebug();
 
+	void CreateMutexStore();
+	void OpenMutexStore();
+
 	void SetEventMain();
 	void SetEventDb();
 	void SetEventDebug();
@@ -70,9 +74,12 @@ namespace Control
 	void UnsetEventDb();
 	void UnsetEventDebug();
 
+	void releaseMutexStore();
+
 	void CloseEvents();
 
 	void syncMain();
 	void syncDb();
 	void syncDebug();
+	void lockMutexStore();
 }

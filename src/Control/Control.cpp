@@ -21,8 +21,9 @@ static command_s* command_p = nullptr;
 static const wchar_t* event_main_wstr = L"EV1MAIN";
 static const wchar_t* event_db_wstr = L"EV1DB";
 static const wchar_t* event_debug_wstr = L"EV2DEBUG";
+static const wchar_t* mutex_store_wstr = L"MUT5TOR3";
 
-static HANDLE event_main, event_db, event_debug;
+static HANDLE event_main, event_db, event_debug, mutex_store;
 
 
 #define TRYWIN(func, msg, ...) if (!func) { std::memset(error_buffer, '\0', std::size(error_buffer)); sprintf_s(error_buffer, std::size(error_buffer), msg, __VA_ARGS__); throw error_buffer; }
@@ -147,6 +148,12 @@ void UnsetEventDebug()
 	TRYWIN(::ResetEvent(event_debug), "Failed to reset %s event: %d", "Debug", GetLastError());
 }
 
+
+void releaseMutexStore()
+{
+	::ReleaseMutex(mutex_store);
+}
+
 inline
 void OpenEvent(HANDLE& event, const wchar_t* ev_name)
 {
@@ -181,12 +188,39 @@ void OpenEventDebug()
 	OpenEvent(event_debug, event_debug_wstr);
 }
 
+inline
+void CreateMutex(HANDLE& handle, const wchar_t* name)
+{
+	SECURITY_ATTRIBUTES sa = { sizeof(sa), NULL, TRUE };
+	TRYWIN((handle = ::CreateMutexW(&sa, FALSE, name)),
+		"%d: Failed to create %ls mutex\n", GetLastError(), name);
+}
+
+
+void CreateMutexStore()
+{
+	CreateMutex(mutex_store, mutex_store_wstr);
+}
+
+inline
+void OpenMutex(HANDLE& handle, const wchar_t* name)
+{
+	TRYWIN((handle = ::OpenMutexW(SYNCHRONIZE, TRUE, name)), "%d: Failed to open %ls mutex\n", GetLastError(), name);
+}
+
+
+void OpenMutexStore()
+{
+	TRYWIN(mutex_store, mutex_store_wstr);
+}
+
 
 void CloseEvents()
 {
 	CloseHandle(event_main);
 	CloseHandle(event_db);
 	CloseHandle(event_debug);
+	CloseHandle(mutex_store);
 }
 
 
@@ -215,5 +249,11 @@ void syncDebug()
 {
 	sync(&event_debug);
 	UnsetEventDebug();
+}
+
+
+void lockMutexStore()
+{
+	WaitForSingleObject(mutex_store, INFINITE);
 }
 }

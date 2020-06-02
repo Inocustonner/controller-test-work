@@ -120,6 +120,7 @@ void cars()
 
 static void store()
 {
+	lockMutexStore();
 	data_s* data_p = Control::next_data(nullptr);
 	massert(data_p->type == DataType::Str);
 	const char* com_cstr = reinterpret_cast<const char*>(data_p->body());
@@ -152,6 +153,7 @@ static void store()
 		write_error(e.what());
 		command_p->cmd = Cmd::Err;
 	}
+	releaseMutexStore();
 	// Control::SetEventDb();	// no sync on this function
 }
 
