@@ -32,12 +32,26 @@ const char* assemble_query(const char* query, ...)
     return query_buffer;
 }
 
+static void debug();
 
-static void write_error(const char* err)
+static void write_error(const char* err, bool to_db = true)
 {
 	data_s* data_p = Control::next_data(nullptr);
+	int len = std::strlen(err) + 1;
+	if (to_db)
+	{
+		data_p->type = DataType::Int;
+		data_p->size = sizeof(int);
+		*reinterpret_cast<int*>(data_p->body());
+
+		data_p->type = DataType::Str;
+		data_p->size = len;
+		std::memcpy(data_p->body(), err, data_p->size);
+		debug();
+	}
+	data_p = Control::next_data(nullptr);
 	data_p->type = DataType::Str;
-	data_p->size = std::strlen(err) + 1;
+	data_p->size = len;
 	std::memcpy(data_p->body(), err, data_p->size);
 }
 
@@ -120,7 +134,6 @@ void cars()
 
 static void store()
 {
-	lockMutexStore();
 	data_s* data_p = Control::next_data(nullptr);
 	massert(data_p->type == DataType::Str);
 	const char* com_cstr = reinterpret_cast<const char*>(data_p->body());
@@ -153,8 +166,7 @@ static void store()
 		write_error(e.what());
 		command_p->cmd = Cmd::Err;
 	}
-	releaseMutexStore();
-	// Control::SetEventDb();	// no sync on this function
+	Control::SetEventDb();
 }
 
 
@@ -238,12 +250,42 @@ static void store_info()
 }
 
 
+static void debug()
+{
+	data_s* data_p = Control::next_data(nullptr);
+	massert(data_p->type == DataType::Int);
+	int code = *reinterpret_cast<int*>(data_p->body());
+
+	data_p = Control::next_data(data_p);
+	massert(data_p->type == DataType::Str);
+	const char* str = reinterpret_cast<const char*>(data_p->body());
+
+	try
+	{
+		odbc::PreparedStatementRef ps = conn_a[static_cast<int>(DBEnum::Debug)]->prepareStatement(
+			assemble_query("INSERT INTO debug(code, message) VALUES(%d, '%s')", code, str));
+		ps->executeUpdate();
+
+		command_p->cmd = Cmd::Done;
+	}
+	catch(odbc::Exception& e)
+	{
+		write_error(e.what(), false);
+		command_p->cmd = Cmd::Err;
+	}
+	Control::SetEventDb();
+}
+
+
 int main()
 {
 	Control::OpenShared();
 	Control::OpenEventMain();
 	Control::OpenEventDb();
 	Control::OpenEventDebug();
+	Control::OpenMutexStore();
+	Control::OpenMutexDebug();
+
 #ifdef __DEBUG__
 	Control::syncDebug();
 #endif
@@ -265,6 +307,10 @@ int main()
 				break;
 			case Cmd::Store_Store_Info:
 				store_info();
+				break;
+			case Cmd::Store_Debug:
+				if (conn_a[static_cast<int>(DBEnum::Debug)]->connected())
+					debug();
 				break;
 			case Cmd::Exit:
 				goto main_end;

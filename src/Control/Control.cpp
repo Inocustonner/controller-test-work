@@ -7,6 +7,9 @@
 #include <windows.h>
 #undef CreateEvent
 #undef OpenEvent
+#undef OpenMutex
+#undef CreateMutex
+
 using BoostSMem = boost::interprocess::shared_memory_object;
 using boost::interprocess::mapped_region;
 
@@ -22,11 +25,14 @@ static const wchar_t* event_main_wstr = L"EV1MAIN";
 static const wchar_t* event_db_wstr = L"EV1DB";
 static const wchar_t* event_debug_wstr = L"EV2DEBUG";
 static const wchar_t* mutex_store_wstr = L"MUT5TOR3";
+static const wchar_t* mutex_debug_wstr = L"MUTD3BUG";
 
-static HANDLE event_main, event_db, event_debug, mutex_store;
+static HANDLE event_main, event_db, event_debug, mutex_store, mutex_debug;
 
 
 #define TRYWIN(func, msg, ...) if (!func) { std::memset(error_buffer, '\0', std::size(error_buffer)); sprintf_s(error_buffer, std::size(error_buffer), msg, __VA_ARGS__); throw error_buffer; }
+
+static std::mutex main_mutex;
 
 namespace Control
 {
@@ -78,6 +84,11 @@ data_s* next_data(data_s* data_p)
 		return reinterpret_cast<data_s*>(command_p + 1);// command_p->data_p;
 }
 
+
+std::mutex& get_main_mutex()
+{
+	return main_mutex;
+}
 
 
 inline
@@ -151,7 +162,14 @@ void UnsetEventDebug()
 
 void releaseMutexStore()
 {
-	::ReleaseMutex(mutex_store);
+	TRYWIN(::ReleaseMutex(mutex_store), "%d Failed to release mutex %s", GetLastError(), "Store");
+}
+
+
+void releaseMutexDebug()
+{
+
+	TRYWIN(::ReleaseMutex(mutex_debug), "%d Failed to release mutex Debug", GetLastError());
 }
 
 inline
@@ -202,16 +220,28 @@ void CreateMutexStore()
 	CreateMutex(mutex_store, mutex_store_wstr);
 }
 
+
+void CreateMutexDebug()
+{
+	CreateMutex(mutex_debug, mutex_debug_wstr);
+}
+
 inline
 void OpenMutex(HANDLE& handle, const wchar_t* name)
 {
-	TRYWIN((handle = ::OpenMutexW(SYNCHRONIZE, TRUE, name)), "%d: Failed to open %ls mutex\n", GetLastError(), name);
+	TRYWIN((handle = OpenMutexW(MUTEX_ALL_ACCESS, TRUE, name)), "%d: Failed to open %ls mutex\n", GetLastError(), name);
 }
 
 
 void OpenMutexStore()
 {
-	TRYWIN(mutex_store, mutex_store_wstr);
+	OpenMutex(mutex_store, mutex_store_wstr);
+}
+
+
+void OpenMutexDebug()
+{
+	OpenMutex(mutex_debug, mutex_debug_wstr);
 }
 
 
@@ -221,6 +251,7 @@ void CloseEvents()
 	CloseHandle(event_db);
 	CloseHandle(event_debug);
 	CloseHandle(mutex_store);
+	CloseHandle(mutex_debug);
 }
 
 
@@ -252,8 +283,27 @@ void syncDebug()
 }
 
 
+inline
+void lockMutex(HANDLE& handle)
+{
+	switch (WaitForSingleObject(handle, INFINITE))
+	{
+		case WAIT_OBJECT_0:
+			break;
+		default:
+			TRYWIN(0, "%d:Failed to obtain ownership of mutex\n", GetLastError());
+	}
+}
+
+
 void lockMutexStore()
 {
-	WaitForSingleObject(mutex_store, INFINITE);
+	lockMutex(mutex_store);
+}
+
+
+void lockMutexDebug()
+{
+	lockMutex(mutex_debug);
 }
 }

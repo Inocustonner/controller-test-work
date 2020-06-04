@@ -203,37 +203,11 @@ const Settings init_settings()
 	Control::OpenEventMain();
 	Control::OpenEventDb();
 	Control::OpenEventDebug();
+	Control::OpenMutexStore();
+	Control::OpenMutexDebug();
 
 	return setts;
 }
-
-
-// static odbc::ConnectionRef create_connection(const DB_Auth& auth) noexcept
-// {
-// 	try
-// 	{
-// 		odbc::ConnectionRef conn = get_odbc_env()->createConnection();
-// 		conn->connect(auth.conn_str.c_str());
-// 		return conn;
-// 	}
-// 	catch (odbc::Exception &e)
-// 	{
-// 		dprintf("Fatal error creating odbc connection %s\n", e.what());
-// 		dprintf(msg<4>());
-// 		if (get_log_lvl())
-// 			system("pause");
-// 		exit(0);
-// 	}
-// }
-
-// void init_databases(const std::array<DB_Auth, DB_CNT>& dbi_a) noexcept
-// {
-// 	get_log_db() = create_connection(dbi_a[static_cast<int>(DBEnum::Debug)]);
-// 	get_cars_db() = create_connection(dbi_a[static_cast<int>(DBEnum::Cars)]);
-// 	get_store_db() = create_connection(dbi_a[static_cast<int>(DBEnum::Store)]);
-// 	get_store_info_db() = create_connection(dbi_a[static_cast<int>(DBEnum::Store_Info)]);
-// 	get_drivers_db() = create_connection(dbi_a[static_cast<int>(DBEnum::Drivers)]);
-// }
 
 
 void init_databases(const std::array<DB_Auth, DB_CNT>& dbi_a)

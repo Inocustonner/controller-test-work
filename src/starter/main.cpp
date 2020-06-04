@@ -46,6 +46,8 @@ int main()
 
 		Control::CreateEventMain();
 		Control::CreateEventDb();
+		Control::CreateMutexStore();
+		Control::CreateMutexDebug();
 #ifdef __DEBUG__
 		Control::CreateEventDebug();
 #endif

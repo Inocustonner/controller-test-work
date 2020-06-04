@@ -13,7 +13,6 @@
 #include <cstdarg>
 
 static int log_lvl = default_log_lvl;
-static odbc::ConnectionRef log_db;
 
 int get_log_lvl()
 {
@@ -24,18 +23,6 @@ int get_log_lvl()
 void set_log_lvl(const int lvl)
 {
 	log_lvl = lvl;
-}
-
-
-// void set_log_db(odbc::ConnectionRef new_log_db) noexcept
-// {
-// 	log_db = new_log_db;
-// }
-
-
-odbc::ConnectionRef& get_log_db()
-{
-	return log_db;
 }
 
 template<typename ...Args>
@@ -62,23 +49,25 @@ static const char* make_buf(const char *fmt, Args&& ...args) noexcept
 
 static void dblog(int code, const char* str) noexcept
 {
-	try
-	{
-		auto ps = log_db->prepareStatement("INSERT INTO debug(code, message) VALUES(?, ?)");
-			//"ON CONFLICT (id) DO UPDATE SET "
-			//"id=EXCLUDED.id, code=EXCLUDED.code, message=EXCLUDED.message, ts=EXCLUDED.ts");
-		ps->setInt(1, code);
-		ps->setCString(2, str);
-		ps->executeUpdate();
-	}
-	catch (const odbc::Exception &e)
-	{
-		if (log_lvl > 0)
-			printf("Error while storing to debug db:\n\t%s", e.what());
-		else
-			mMsgBox(std::get<2>(msg<6>()), L"ERROR", 20000);					// throw message box
-	}
+	std::lock_guard<std::mutex> guard(Control::get_main_mutex());
 
+	//Control::lockMutexDebug();
+	command_s* cmd_p = Control::get_command();
+	cmd_p->cmd = Cmd::Store_Debug;
+
+	data_s* data_p = Control::next_data(nullptr);
+	data_p->type = DataType::Int;
+	data_p->size = sizeof(int);
+	*reinterpret_cast<int*>(data_p->body()) = code;
+
+	data_p = Control::next_data(data_p);
+	data_p->type = DataType::Str;
+	data_p->size = std::strlen(str) + 1;
+	std::memcpy(data_p->body(), str, data_p->size);
+
+	//Control::releaseMutexDebug();
+	Control::SetEventMain();
+	Control::syncDb();
 }
 
 
@@ -90,8 +79,8 @@ void dprintf(const char *fmt, ...)
 	const char* str = make_buf(fmt, vl);
 	if (log_lvl > 0)
 		fprintf(stderr, "%s", str);
-	//if (log_lvl < 2 && log_db->connected())
-		//dblog(-1, str);
+	if (log_lvl < 2)
+		dblog(-1, str);
 
 	va_end(vl);
 }
@@ -105,10 +94,10 @@ void dprintf(const msg_t msg)
 		fprintf(stderr, "%s\n", std::get<1>(msg));
 	if (std::get<0>(msg) != prev_code)
 	{
-		/*if (log_lvl < 2 && log_db->connected()) // avoid multiple writing to db
+		if (log_lvl < 2) // avoid multiple writing to db
 		{
 			dblog(std::get<0>(msg), std::get<1>(msg));
-		}*/
+		}
 		mMsgBox(std::get<2>(msg), L"ERROR", 20000);
 	}
 	prev_code = std::get<0>(msg);

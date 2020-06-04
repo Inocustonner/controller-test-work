@@ -1,3 +1,5 @@
+#include <mutex>
+
 enum class Cmd : int
 {
 	InitDb,
@@ -53,6 +55,8 @@ namespace Control
 	command_s* get_command();
 	data_s* next_data(data_s* data_p = nullptr);
 
+	std::mutex& get_main_mutex();
+
 	void CreateEventMain();
 	void CreateEventDb();
 
@@ -64,7 +68,11 @@ namespace Control
 	void OpenEventDebug();
 
 	void CreateMutexStore();
+	void CreateMutexDebug();	// for debug db
+
+
 	void OpenMutexStore();
+	void OpenMutexDebug();		// for debug db
 
 	void SetEventMain();
 	void SetEventDb();
@@ -75,6 +83,7 @@ namespace Control
 	void UnsetEventDebug();
 
 	void releaseMutexStore();
+	void releaseMutexDebug();
 
 	void CloseEvents();
 
@@ -82,4 +91,5 @@ namespace Control
 	void syncDb();
 	void syncDebug();
 	void lockMutexStore();
+	void lockMutexDebug();
 }
