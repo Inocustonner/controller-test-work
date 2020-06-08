@@ -7,7 +7,7 @@ struct SerialPool
 public:
 	// template<typename ...SArgs> // SArgs = serial::Serial...
 	// SerialPool(SArgs&& ...serial_args) : ports{ std::move(serial_args)... } {}
-
+	SerialPool() = default;
 	SerialPool(std::vector<serial::Serial> &&_ports) : ports{ std::move(_ports) } {}
 	
 	[[nodiscard]]

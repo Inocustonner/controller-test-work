@@ -5,6 +5,8 @@
 #include "Reader.hpp"
 #include "Lights.hpp"
 
+#include <Error.hpp>
+
 #include <thread>
 #include <cstdlib>
 
@@ -59,8 +61,19 @@ double fix(const double p1, const bool is_stable)
 
 bool init_fixer(const char *ini_filename)
 {
-	const Settings setts = init_settings();
-	init_databases(setts.dbi_a);
+	Settings setts = {};
+	try
+	{
+		setts = init_settings();
+		init_databases(setts.dbi_a);
+	}
+	catch (const ctrl::error& e)
+	{
+		dprintf(e.what());
+		if (get_log_lvl() > 1)
+			std::system("pause");
+		std::exit(1);
+	}
 	std::thread th(com_reader, setts.pi_v, setts.suffix);
 	th.detach();
 	return true;

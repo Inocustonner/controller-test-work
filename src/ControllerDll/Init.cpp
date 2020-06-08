@@ -6,6 +6,7 @@
 
 #include <Control.hpp>
 
+#include <Error.hpp>
 #include <Encode.hpp>
 #include <inipp.h>
 #include <dllInjLib/dllInj.h>	// CreateConsole
@@ -156,6 +157,9 @@ const Settings init_settings()
 	Settings setts = {};
 	inipp::Ini<char> ini;
 	FILE* fp = fopen(path_to_ini.c_str(), "rb");
+	if (!fp)
+		throw ctrl::error("Failed to open file %s\n", path_to_ini.c_str());
+
 	std::string ss;
 	try
 	{
@@ -165,7 +169,7 @@ const Settings init_settings()
 	{
 		fclose(fp);
 		dprintf(msg<9>());
-		exit(1);
+		throw ctrl::error("Failed to decode: \"%s\"", e.what());
 	}
 	fclose(fp);
 
@@ -239,12 +243,6 @@ void init_databases(const std::array<DB_Auth, DB_CNT>& dbi_a)
 	if (cmd_p->cmd != Cmd::Done)
 	{
 		data_p = Control::next_data(nullptr);
- 		//dprintf(msg<4>());
-		if (get_log_lvl())
-		{
-			printf("Fatal error creating odbc connection %s\n", reinterpret_cast<const char*>(data_p->body()));
-			system("pause");
-		}
- 		exit(0);
+		throw ctrl::error("Unable to create odbc connections %s\n", reinterpret_cast<const char*>(data_p->body()));
 	}
 }

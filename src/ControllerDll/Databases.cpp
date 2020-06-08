@@ -1,8 +1,9 @@
 #include "Databases.hpp"
 #include "Output.hpp"
 #include "State.hpp"
-#include <Control.hpp>
 
+#include <Control.hpp>
+#include <Error.hpp>
 #include <myassert.hpp>
 
 static void write_str_to_data(data_s* data_p, const char* cstr)
@@ -80,7 +81,7 @@ void store_info(const char* com, const char* barcode, const char* gn, const char
 	}
 	else
 	{
-		fprintf(stderr, "%s", reinterpret_cast<const char*>(data_p->body()));
+		throw ctrl::error("Store Info error: %s\n", reinterpret_cast<const char*>(data_p->body()));
 	}
 }
 
@@ -105,7 +106,6 @@ data_s* select_from_cars()
 	}
 	else
 	{
-		fprintf(stderr, "%s", reinterpret_cast<const char*>(data_p->body()));
-		return nullptr;
+		throw ctrl::error("Select from cars error: %s\n", reinterpret_cast<const char*>(data_p->body()));
 	}
 }
