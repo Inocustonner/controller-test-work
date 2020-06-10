@@ -102,6 +102,7 @@ data_s* select_from_cars()
 	Control::syncDb();
 	if (cmd_p->cmd == Cmd::Done)
 	{
+		throw ctrl::error("Select from cars error: %s\n", reinterpret_cast<const char*>(data_p->body()));
 		return Control::next_data(nullptr);
 	}
 	else

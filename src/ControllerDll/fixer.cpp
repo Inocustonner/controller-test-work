@@ -74,7 +74,7 @@ bool init_fixer(const char *ini_filename)
 			std::system("pause");
 		std::exit(1);
 	}
-	std::thread th(com_reader, setts.pi_v, setts.suffix);
+	std::thread th(com_reader, setts.pi_v, setts.suffix, setts.udentified_car_allowed);
 	th.detach();
 	return true;
 }

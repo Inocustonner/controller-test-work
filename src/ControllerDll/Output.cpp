@@ -13,6 +13,7 @@
 #include <cstdarg>
 
 static int log_lvl = default_log_lvl;
+static int msg_duration = 20000;
 
 int get_log_lvl()
 {
@@ -23,6 +24,12 @@ int get_log_lvl()
 void set_log_lvl(const int lvl)
 {
 	log_lvl = lvl;
+}
+
+
+void set_msg_duration(int secs)
+{
+	msg_duration = secs * 1000;
 }
 
 template<typename ...Args>
@@ -98,7 +105,7 @@ void dprintf(const msg_t msg)
 		{
 			dblog(std::get<0>(msg), std::get<1>(msg));
 		}
-		mMsgBox(std::get<2>(msg), L"ERROR", 20000);
+		mMsgBox(std::get<2>(msg), L"ERROR", msg_duration);
 	}
 	prev_code = std::get<0>(msg);
 	// msgbox

@@ -1,6 +1,6 @@
 #pragma once
 #ifndef __DEBUG__
-	#define assert(p) ((void)0) // define mine
+	#define massert(p) ((void)0) // define mine
 #else
 	#define STRINGIZE(x) STRINGIZE2(x)
 	#define STRINGIZE2(x) #x

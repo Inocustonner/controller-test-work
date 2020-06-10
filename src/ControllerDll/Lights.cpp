@@ -44,7 +44,7 @@ void light(LightsEnum l)
 			break;
 
 		case LightsEnum::Acc:
-			cmd = wait_cmd;
+			cmd = acc_cmd;
 			break;
 
 		case LightsEnum::Deny:

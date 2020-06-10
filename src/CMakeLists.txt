@@ -3,7 +3,7 @@ set(ProjI "${CMAKE_SOURCE_DIR}/include;${CMAKE_SOURCE_DIR}/src/Control")
 set(IncludeI "${BoostI};${ProjI}")
 #architecture=x86 release runtime-debugging=on variant=debug
 #
-set(BoostDateTime "$ENV{BoostBinDir}/date_time/build/msvc-14.2/debug/link-static/threading-multi")
+set(BoostDateTime "$ENV{BoostBinDir}/date_time/build/msvc-14.2/release/link-static/threading-multi")
 set(ProjLibDir "${CMAKE_SOURCE_DIR}/lib/${CMAKE_BUILD_TYPE}")
 set(LnkLibDirs "${BoostDateTime};${ProjLibDir}")
 

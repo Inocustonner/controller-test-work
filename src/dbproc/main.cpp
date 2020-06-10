@@ -44,6 +44,7 @@ static void write_error(const char* err, bool to_db = true)
 		data_p->size = sizeof(int);
 		*reinterpret_cast<int*>(data_p->body());
 
+		data_p = Control::next_data(data_p);
 		data_p->type = DataType::Str;
 		data_p->size = len;
 		std::memcpy(data_p->body(), err, data_p->size);
@@ -200,46 +201,47 @@ static void store_info()
 				reinterpret_cast<const char*>(data_p->body())));
 
 		odbc::ResultSetRef res_ref = ps->executeQuery();
+		std::string fio;
 		if (res_ref->next())
 		{
-			std::string fio = *res_ref->getString(1);
-
-			data_p = Control::next_data(data_p);
-			massert(data_p->type == DataType::Str);
-			const char* com_cstr = reinterpret_cast<const char*>(data_p->body());
-
-			data_p = Control::next_data(data_p);
-			massert(data_p->type == DataType::Str);
-			const char* barcode_cstr = reinterpret_cast<const char*>(data_p->body());
-
-			data_p = Control::next_data(data_p);
-			massert(data_p->type == DataType::Str);
-			const char* gn_cstr = reinterpret_cast<const char*>(data_p->body());
-			const char* query_templ =
-				"IF EXISTS(SELECT * FROM info WHERE event_id=%d)\n"
-				"UPDATE info SET com='%s', barcode='%s', gn='%s', fio='%s' WHERE event_id=%d;\n"
-				"ELSE\n"
-				"INSERT INTO info(event_id, com, barcode, gn, fio) VALUES(%d, '%s', '%s', '%s', '%s');";
-			ps = conn_a[static_cast<int>(DBEnum::Store_Info)]->prepareStatement(
-				assemble_query(
-				    query_templ,
-					event_id,
-					com_cstr, barcode_cstr, gn_cstr, fio.c_str(), event_id,
-					event_id, com_cstr, barcode_cstr, gn_cstr, fio.c_str()));
-
-			ps->executeUpdate();
-
-			command_p->cmd = Cmd::Done;
-
-			data_p = Control::next_data(nullptr);
-			data_p->type = DataType::Int;
-			data_p->size = sizeof(int);
-			*reinterpret_cast<int*>(data_p->body()) = event_id;
+			fio = *res_ref->getString(1);
 		}
 		else
 		{
-			throw "Error reciving fio from drivers db";
+			fio = "";
+			//throw std::exception("Error reciving fio from drivers db");
 		}
+		data_p = Control::next_data(data_p);
+		massert(data_p->type == DataType::Str);
+		const char* com_cstr = reinterpret_cast<const char*>(data_p->body());
+
+		data_p = Control::next_data(data_p);
+		massert(data_p->type == DataType::Str);
+		const char* barcode_cstr = reinterpret_cast<const char*>(data_p->body());
+
+		data_p = Control::next_data(data_p);
+		massert(data_p->type == DataType::Str);
+		const char* gn_cstr = reinterpret_cast<const char*>(data_p->body());
+		const char* query_templ =
+			"IF EXISTS(SELECT * FROM info WHERE event_id=%d)\n"
+			"UPDATE info SET com='%s', barcode='%s', gn='%s', fio='%s' WHERE event_id=%d;\n"
+			"ELSE\n"
+			"INSERT INTO info(event_id, com, barcode, gn, fio) VALUES(%d, '%s', '%s', '%s', '%s');";
+		ps = conn_a[static_cast<int>(DBEnum::Store_Info)]->prepareStatement(
+			assemble_query(
+				query_templ,
+				event_id,
+				com_cstr, barcode_cstr, gn_cstr, fio.c_str(), event_id,
+				event_id, com_cstr, barcode_cstr, gn_cstr, fio.c_str()));
+
+		ps->executeUpdate();
+
+		command_p->cmd = Cmd::Done;
+
+		data_p = Control::next_data(nullptr);
+		data_p->type = DataType::Int;
+		data_p->size = sizeof(int);
+		*reinterpret_cast<int*>(data_p->body()) = event_id;
 	}
 	catch (std::exception& e)
 	{

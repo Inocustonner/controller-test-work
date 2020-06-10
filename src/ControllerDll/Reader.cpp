@@ -28,26 +28,32 @@ void pause_exit()
 
 bool is_barcode_valid(std::vector<std::string> barvec)
 {
-	return barvec.size() == 4;
+	return barvec.size() == 3;
 }
 
 
-std::vector<std::string> splitBy(std::string& s, char delim)
+std::vector<std::string> parse_barcode(std::string s, char delim)
 {
-    size_t pos = 0, ppos = 0;
-    std::vector<std::string> vec;
-    while ((pos = s.find(delim, ppos)) != std::string::npos)
-	{
-        std::string token = s.substr(ppos, pos - ppos);
-        vec.push_back(token);
-        ppos = pos + 1;
-    }
-    vec.push_back(s.substr(ppos, std::string::npos));
-    return vec;
+	std::vector<std::string> vec;
+	vec.reserve(3);
+	constexpr int bar_type_size = 2;
+	constexpr int car_id_size = 8;
+	constexpr int driver_id_size = 8;
+
+	//	...01#12345678#87654321#\r
+	size_t pos = 0;
+	pos = s.substr(0, std::size(s) - 1).rfind(delim);
+	vec.insert(std::begin(vec), { std::begin(s) + pos + 1, std::begin(s) + pos + 1 + driver_id_size });
+
+	pos = s.substr(0, pos).rfind(delim);
+	vec.insert(std::begin(vec), { std::begin(s) + pos + 1, std::begin(s) + pos + 1 + car_id_size });
+
+	vec.insert(std::begin(vec), s.substr(pos - 2, bar_type_size));
+	return vec;
 }
 
 
-void com_reader(std::vector<Port_Info> pi_v, const std::string suffix)
+void com_reader(std::vector<Port_Info> pi_v, const std::string suffix, bool udentified_car_allowed)
 {
 	SerialPool serial_pool;
 	try
@@ -85,7 +91,7 @@ void com_reader(std::vector<Port_Info> pi_v, const std::string suffix)
 		std::string barcode = serial_port.readline(max_line_sz, suffix);
 
 		barcode.pop_back();	// remove suffix
-		const std::vector barvec = splitBy(barcode, '#');
+		const std::vector barvec = parse_barcode(barcode, '#');
 
 		dprintf("\n%s: read %s\n", serial_port.getPort().c_str(), barcode.c_str());
 		if (!is_barcode_valid(barvec))
@@ -96,9 +102,30 @@ void com_reader(std::vector<Port_Info> pi_v, const std::string suffix)
 		}
 		state.id = barvec[1];
 		const std::string driver_id = barvec[2];
+
+		data_s* data_p;
 		try
 		{
-			data_s* data_p = select_from_cars();
+			data_p = select_from_cars();
+		}
+		catch (const ctrl::error& e)
+		{
+			if (!udentified_car_allowed)
+			{
+				dprintf(e.what());
+				dprintf(msg<7>());
+
+				// light deny
+				light(LightsEnum::Deny);
+				continue;
+			}
+			else
+				data_p = nullptr;
+		}
+
+		try
+		{
+			std::string gn;
 			if (data_p)
 			{
 				massert(data_p->type == DataType::Int);
@@ -122,23 +149,21 @@ void com_reader(std::vector<Port_Info> pi_v, const std::string suffix)
 
 				data_p = Control::next_data(data_p);
 				massert(data_p->type == DataType::Str);
-				std::string gn = reinterpret_cast<const char*>(data_p->body());
-
-				state.com = serial_port.getPort();
-				store_info(serial_port.getPort().c_str(), barcode.c_str(), gn.c_str(), driver_id.c_str());
-				set_authorized();
-
-				light(LightsEnum::Acc);
+				gn = reinterpret_cast<const char*>(data_p->body());
 			}
-			else
+			else if (udentified_car_allowed)
 			{
-				std::string e = "cars_db returned nothing for id=" + state.id;
-				dprintf(msg<7>());
-				throw ctrl::error(e.c_str());
-
-				// light deny
-				light(LightsEnum::Deny);
+				state.id = "";
+				gn = "";
+				state.corr = [](double inp) -> double { return inp; };
+				state.min_weight = default_min_weight;
 			}
+			state.com = serial_port.getPort();
+
+			store_info(state.com.c_str(), barcode.c_str(), gn.c_str(), driver_id.c_str());
+			set_authorized();
+
+			light(LightsEnum::Acc);
 		}
 		catch (const ctrl::error& e)
 		{

@@ -77,7 +77,16 @@ static void default_section(Section_Map& default_map, Settings& setts) noexcept
 	
 	inv_if(default_map, "store_diff",
 		[](auto& pair_str){ set_store_diff(std::stod(pair_str->second)); });
-	
+
+	inv_if(default_map, "min_weight",
+		[](auto& pair_str) { set_default_min_weight(std::stod(pair_str->second)); });
+
+	inv_if(default_map, "udentified-car-allowed",
+		[&setts](auto& pair_str) { if (pair_str->second == "on") setts.udentified_car_allowed = true; else setts.udentified_car_allowed = false; });
+
+	inv_if(default_map, "message-duration",
+		[](auto& pair_str) { set_msg_duration(std::stoi(pair_str->second)); });
+
 	set_if(default_map, "suffix", setts.suffix);
 
 	if (setts.suffix == "")

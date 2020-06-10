@@ -20,10 +20,9 @@ struct State
 
 extern const double& reset_thr;
 extern const double& store_diff;
-
+extern const double& default_min_weight;
 extern State state;
 
-State& get_state();
 void reset_state();
 
 [[nodiscard]]
@@ -32,13 +31,19 @@ const std::atomic<bool>& authorized();
 void set_authorized();
 
 inline
-void set_reset_thr(const double reset_thr_value)
+void set_reset_thr(double reset_thr_value)
 {
 	const_cast<double&>(reset_thr) = reset_thr_value;
 }
 
 inline
-void set_store_diff(const double store_diff_value)
+void set_store_diff(double store_diff_value)
 {
 	const_cast<double&>(store_diff) = store_diff_value;
+}
+
+inline
+void set_default_min_weight(double weight)
+{
+	const_cast<double&>(default_min_weight) = weight;
 }

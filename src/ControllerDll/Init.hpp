@@ -40,6 +40,7 @@ struct Settings
 	std::vector<Port_Info> pi_v;
 	std::array<DB_Auth, DB_CNT> dbi_a;
 	std::string suffix = "";
+	bool udentified_car_allowed = false;
 };
 
 const Settings init_settings();
