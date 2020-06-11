@@ -51,7 +51,7 @@ void store(const char* com, const char* id,
 }
 
 
-void store_info(const char* com, const char* barcode, const char* gn, const char* driver_id)
+void store_info(const char* com, const char* barcode, const char* gn, const char* driver_id, bool udentified_allowed)
 {
 	std::lock_guard<std::mutex> guard(Control::get_main_mutex());
 
@@ -59,6 +59,9 @@ void store_info(const char* com, const char* barcode, const char* gn, const char
 	cmd_p->cmd = Cmd::Store_Store_Info;
 
 	data_s* data_p = Control::next_data();
+	write_int_to_data(data_p, udentified_allowed);
+
+	data_p = Control::next_data(data_p);
 	write_str_to_data(data_p, driver_id);
 
 	data_p = Control::next_data(data_p);
@@ -102,7 +105,6 @@ data_s* select_from_cars()
 	Control::syncDb();
 	if (cmd_p->cmd == Cmd::Done)
 	{
-		throw ctrl::error("Select from cars error: %s\n", reinterpret_cast<const char*>(data_p->body()));
 		return Control::next_data(nullptr);
 	}
 	else

@@ -103,6 +103,7 @@ void com_reader(std::vector<Port_Info> pi_v, const std::string suffix, bool uden
 		state.id = barvec[1];
 		const std::string driver_id = barvec[2];
 
+
 		data_s* data_p;
 		try
 		{
@@ -114,20 +115,17 @@ void com_reader(std::vector<Port_Info> pi_v, const std::string suffix, bool uden
 			{
 				dprintf(e.what());
 				dprintf(msg<7>());
-
-				// light deny
-				light(LightsEnum::Deny);
-				continue;
 			}
-			else
-				data_p = nullptr;
+			data_p = nullptr;
 		}
 
 		try
 		{
 			std::string gn;
+			LightsEnum le = LightsEnum::Deny;
 			if (data_p)
 			{
+				le = LightsEnum::Acc;
 				massert(data_p->type == DataType::Int);
 				state.min_weight = static_cast<double>(*reinterpret_cast<int*>(data_p->body()));
 
@@ -158,16 +156,24 @@ void com_reader(std::vector<Port_Info> pi_v, const std::string suffix, bool uden
 				state.corr = [](double inp) -> double { return inp; };
 				state.min_weight = default_min_weight;
 			}
+			else// invalid car
+			{
+				light(LightsEnum::Deny);
+				continue;
+			}
+
 			state.com = serial_port.getPort();
 
-			store_info(state.com.c_str(), barcode.c_str(), gn.c_str(), driver_id.c_str());
+			store_info(state.com.c_str(), barcode.c_str(), gn.c_str(), driver_id.c_str(), udentified_car_allowed);
 			set_authorized();
 
-			light(LightsEnum::Acc);
+			light(le);
 		}
 		catch (const ctrl::error& e)
 		{
+			light(LightsEnum::Deny);
 			dprintf(e.what());
+			dprintf(msg<11>());
 		}
 	}
 }

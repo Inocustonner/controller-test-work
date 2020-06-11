@@ -42,7 +42,7 @@ static void write_error(const char* err, bool to_db = true)
 	{
 		data_p->type = DataType::Int;
 		data_p->size = sizeof(int);
-		*reinterpret_cast<int*>(data_p->body());
+		*reinterpret_cast<int*>(data_p->body()) = -1;
 
 		data_p = Control::next_data(data_p);
 		data_p->type = DataType::Str;
@@ -194,7 +194,11 @@ static void store_info()
 	{
 		int event_id = inc_event_id();
 
-		data_s* data_p = Control::next_data(nullptr);
+		data_s* data_p = Control::next_data();
+		massert(data_p->type == DataType::Int);
+		int allow_udentified = *static_cast<int*>(data_p->body());
+
+		data_p = Control::next_data(data_p);
 		massert(data_p->type == DataType::Str);
 
 		odbc::PreparedStatementRef ps = conn_a[static_cast<int>(DBEnum::Drivers)]->prepareStatement(assemble_query("SELECT fio FROM drivers WHERE id=%s",
@@ -206,10 +210,13 @@ static void store_info()
 		{
 			fio = *res_ref->getString(1);
 		}
-		else
+		else if (allow_udentified)
 		{
 			fio = "";
-			//throw std::exception("Error reciving fio from drivers db");
+		}
+		else
+		{
+			throw std::exception("Error reciving fio from drivers db");
 		}
 		data_p = Control::next_data(data_p);
 		massert(data_p->type == DataType::Str);
