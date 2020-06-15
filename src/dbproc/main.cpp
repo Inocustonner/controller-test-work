@@ -6,6 +6,7 @@
 #include <odbc/PreparedStatement.h>
 #include <odbc/ResultSet.h>
 #include <odbc/Exception.h>
+#include <odbc/DatabaseMetaData.h>
 
 #include <myassert.hpp>
 
@@ -14,6 +15,15 @@
 #include <iostream>
 #include <string>
 #include <cstdarg>
+
+struct dbinf
+{
+	bool postgres = false;
+	bool mssql = false;
+};
+
+static dbinf storedb_inf;
+static dbinf store_infodb_inf;
 
 static command_s* command_p;
 
@@ -56,6 +66,21 @@ static void write_error(const char* err, bool to_db = true)
 	std::memcpy(data_p->body(), err, data_p->size);
 }
 
+void set_dbinf(dbinf& inf, DBEnum dbenum)
+{
+	std::string driver = conn_a[static_cast<int>(dbenum)]->getDatabaseMetaData()->getDriverName();
+	std::for_each(std::begin(driver), std::end(driver), [](char& c) { c = tolower(c); });
+
+	if (driver.find("postgres") != std::string::npos)
+	{
+		inf.postgres = true;
+	}
+	else if (driver.find("ms") != std::string::npos)
+	{
+		inf.mssql = true;
+	}
+}
+
 
 static void initdb()
 {
@@ -82,6 +107,10 @@ static void initdb()
 		write_error(e.what());
 		command_p->cmd = Cmd::Err;
 	}
+
+	set_dbinf(store_infodb_inf, DBEnum::Store_Info);
+	set_dbinf(storedb_inf, DBEnum::Store);
+
 	Control::SetEventDb();
 }
 
@@ -121,7 +150,7 @@ void cars()
 		}
 		else
 		{
-			throw "No info recived";
+			throw std::exception("No info recived");
 		}
 	}
 	catch (std::exception& e)
@@ -175,7 +204,12 @@ static int inc_event_id()
 {
 	// SELECT * FROM sys.sequences WHERE name = 'event_id';
 	// "SELECT nextval('event_id')" in postgres
-	auto ps = conn_a[static_cast<int>(DBEnum::Store)]->prepareStatement("SELECT NEXT VALUE FOR event_id");
+	odbc::PreparedStatementRef ps;
+
+	if (storedb_inf.postgres)
+		ps = conn_a[static_cast<int>(DBEnum::Store)]->prepareStatement("SELECT nextval('event_id')");
+	else
+		ps = conn_a[static_cast<int>(DBEnum::Store)]->prepareStatement("SELECT NEXT VALUE FOR event_id");
 	auto rs = ps->executeQuery();
 	if (rs->next())
 	{
@@ -229,17 +263,23 @@ static void store_info()
 		data_p = Control::next_data(data_p);
 		massert(data_p->type == DataType::Str);
 		const char* gn_cstr = reinterpret_cast<const char*>(data_p->body());
+		const char* begin_postgres = "DO $$\nBEGIN\n";
+		const char* end_postgres = "\nEND IF; END\n$$";
 		const char* query_templ =
-			"IF EXISTS(SELECT * FROM info WHERE event_id=%d)\n"
+			"%s"
+			"IF EXISTS(SELECT * FROM info WHERE event_id=%d) %s\n"
 			"UPDATE info SET com='%s', barcode='%s', gn='%s', fio='%s' WHERE event_id=%d;\n"
 			"ELSE\n"
-			"INSERT INTO info(event_id, com, barcode, gn, fio) VALUES(%d, '%s', '%s', '%s', '%s');";
+			"INSERT INTO info(event_id, com, barcode, gn, fio) VALUES(%d, '%s', '%s', '%s', '%s');"
+			"%s";
 		ps = conn_a[static_cast<int>(DBEnum::Store_Info)]->prepareStatement(
 			assemble_query(
 				query_templ,
-				event_id,
+				store_infodb_inf.postgres ? begin_postgres : "",
+				event_id, store_infodb_inf.postgres ? "THEN" : "",
 				com_cstr, barcode_cstr, gn_cstr, fio.c_str(), event_id,
-				event_id, com_cstr, barcode_cstr, gn_cstr, fio.c_str()));
+				event_id, com_cstr, barcode_cstr, gn_cstr, fio.c_str(),
+				store_infodb_inf.postgres ? end_postgres : "" ));
 
 		ps->executeUpdate();
 
@@ -261,6 +301,10 @@ static void store_info()
 
 static void debug()
 {
+	if (conn_a[static_cast<int>(DBEnum::Debug)].isNull() ||
+		!conn_a[static_cast<int>(DBEnum::Debug)]->connected())
+		goto end_sync;
+
 	data_s* data_p = Control::next_data(nullptr);
 	massert(data_p->type == DataType::Int);
 	int code = *reinterpret_cast<int*>(data_p->body());
@@ -282,6 +326,7 @@ static void debug()
 		write_error(e.what(), false);
 		command_p->cmd = Cmd::Err;
 	}
+end_sync:
 	Control::SetEventDb();
 }
 

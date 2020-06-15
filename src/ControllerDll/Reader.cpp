@@ -133,7 +133,7 @@ void com_reader(std::vector<Port_Info> pi_v, const std::string suffix, bool uden
 				massert(data_p->type == DataType::Int);
 				double tmp_corr = static_cast<double>(*reinterpret_cast<int*>(data_p->body()));
 
-				if (0 < tmp_corr && tmp_corr < 100)
+				if (-100 < tmp_corr && tmp_corr < 100)
 				{
 					tmp_corr = 1.0 + tmp_corr / 100;
 					state.corr = [mw = state.min_weight, corr_k = tmp_corr](double inp) -> double
