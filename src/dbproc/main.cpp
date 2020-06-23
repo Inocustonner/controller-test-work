@@ -340,9 +340,8 @@ int main()
 	Control::OpenMutexStore();
 	Control::OpenMutexDebug();
 
-#ifdef __DEBUG__
 	Control::syncDebug();
-#endif
+
 	command_p = Control::get_command();
 
 	while (true)

@@ -5,6 +5,8 @@
 
 #include <cstdio>
 #include <windows.h>
+#include <TLHelp32.h>
+
 #undef CreateEvent
 #undef OpenEvent
 #undef OpenMutex
@@ -30,7 +32,7 @@ static const wchar_t* mutex_debug_wstr = L"MUTD3BUG";
 static HANDLE event_main, event_db, event_debug, mutex_store, mutex_debug;
 
 
-#define TRYWIN(func, msg, ...) if (!func) { std::memset(error_buffer, '\0', std::size(error_buffer)); sprintf_s(error_buffer, std::size(error_buffer), msg, __VA_ARGS__); throw error_buffer; }
+#define TRYWIN(func, msg, ...) if (!func) { std::memset(error_buffer, '\0', std::size(error_buffer)); sprintf_s(error_buffer, std::size(error_buffer), msg, __VA_ARGS__); throw std::exception(error_buffer); }
 
 static std::mutex main_mutex;
 
@@ -38,6 +40,74 @@ namespace Control
 {
 char error_buffer[1024];
 
+
+DWORD findProcessId(const char* proc_name)
+{
+    PROCESSENTRY32 processInfo;
+    processInfo.dwSize = sizeof(processInfo);
+
+    HANDLE processesSnapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, NULL);
+    if (processesSnapshot == INVALID_HANDLE_VALUE)
+	{
+        return 0;
+    }
+
+    Process32First(processesSnapshot, &processInfo);
+	do
+	{
+		if (!_stricmp(proc_name, processInfo.szExeFile))
+		{
+			CloseHandle(processesSnapshot);
+			return processInfo.th32ProcessID;
+		}
+	} while (Process32Next(processesSnapshot, &processInfo));
+
+    CloseHandle(processesSnapshot);
+    return 0;
+}
+
+
+HANDLE find_proc(const char* proc_name)
+{
+	if (DWORD pid = findProcessId(proc_name); pid != 0)
+	{
+		HANDLE ph = OpenProcess(PROCESS_ALL_ACCESS, FALSE, pid);
+		if (ph != INVALID_HANDLE_VALUE)
+			return ph;
+	}
+	return INVALID_HANDLE_VALUE;
+}
+
+
+HANDLE start_proc(const char* module_name)
+{
+	static char error_buffer[1024];
+
+	STARTUPINFO si = {};
+	PROCESS_INFORMATION pi = {};
+
+	if (!CreateProcessA(
+		module_name,
+		nullptr,
+		NULL,
+		NULL,
+		TRUE,
+		0,
+		NULL,
+		NULL,
+		&si,
+		&pi))
+	{
+		fprintf(stderr, "CreateProcess error : %d\n", GetLastError());
+		std::memset(error_buffer, '\0', std::size(error_buffer));
+		sprintf(error_buffer, "CreateProcess error : %d", GetLastError());
+
+		throw error_buffer;
+	}
+	CloseHandle(pi.hThread);	// bcs i dont use it
+
+	return pi.hProcess;
+}
 
 void InitShared()
 {
@@ -56,7 +126,7 @@ void OpenShared()
 {
 	using namespace boost::interprocess;
 
-	shared_memory = BoostSMem(boost::interprocess::open_only, memory_name, read_write);
+	shared_memory = BoostSMem(boost::interprocess::open_or_create, memory_name, read_write);
 
 	shared_memory.truncate(shared_size);
 	mapped_memory = mapped_region(shared_memory, read_write);
@@ -165,10 +235,8 @@ void releaseMutexStore()
 	TRYWIN(::ReleaseMutex(mutex_store), "%d Failed to release mutex %s", GetLastError(), "Store");
 }
 
-
 void releaseMutexDebug()
 {
-
 	TRYWIN(::ReleaseMutex(mutex_debug), "%d Failed to release mutex Debug", GetLastError());
 }
 
@@ -279,7 +347,7 @@ void syncDb()
 void syncDebug()
 {
 	sync(&event_debug);
-	UnsetEventDebug();
+	//UnsetEventDebug();
 }
 
 

@@ -48,6 +48,10 @@ struct command_s
 
 namespace Control
 {
+	using HANDLE = void*;
+	HANDLE find_proc(const char* proc_name);
+	HANDLE start_proc(const char* module_name);
+
 	void InitShared();
 	void OpenShared();
 	void RemoveShared();

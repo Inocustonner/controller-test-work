@@ -1,5 +1,6 @@
 include_directories(${IncludeI})
 link_directories(${LnkLibDirs})
+add_compile_definitions($<$<CONFIG:RelWithDebInfo>:__DEBUG__>)
 
 add_definitions(/D_CRT_SECURE_NO_WARNINGS /DODBC_STATIC)
 add_executable(dbproc main.cpp 

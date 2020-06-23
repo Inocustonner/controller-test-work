@@ -65,7 +65,7 @@ static void debug_section(Section_Map& debug_map) noexcept
 {
 	inv_if(debug_map, "LogLevel",
 		[](auto& pair_str){ set_log_lvl(std::stoi(pair_str->second)); });
-	if (get_log_lvl > 0)
+	if (get_log_lvl() > 0)
 		CreateConsole();
 }
 
@@ -159,6 +159,39 @@ static void lights_section(Section_Map& lgt_map)
 
 const Settings init_settings()
 {
+	Control::InitShared();
+
+	Control::CreateEventMain();
+	Control::UnsetEventMain();
+
+	Control::CreateEventDebug();
+	Control::UnsetEventDebug();
+
+	if (HANDLE h = Control::start_proc((get_module_dir() + "starter.exe").c_str()); h == INVALID_HANDLE_VALUE) // bcs i dont use this handle here
+	{
+		MessageBox(NULL, "Failed to start 'starter.exe'", "ERROR", MB_OK);
+
+		try
+		{
+			Control::CloseEvents();
+		}
+		catch (const std::exception& e)
+		{ }
+
+		CloseHandle(h);
+		std::exit(1);
+	}
+	else
+	{
+		CloseHandle(h);
+	}
+	Control::SetEventMain();
+	Control::syncDebug();
+
+	Control::OpenEventDb();
+	Control::OpenMutexDebug();
+	Control::OpenMutexStore();
+
 	constexpr auto ini_name = "ini.ini";
 	const std::string path_to_ini = get_module_dir() + ini_name;
 
@@ -212,22 +245,12 @@ const Settings init_settings()
 
 	set_log_lvl(prev_log_level);
 
-	Control::OpenShared();
-	Control::OpenEventMain();
-	Control::OpenEventDb();
-	Control::OpenEventDebug();
-	Control::OpenMutexStore();
-	Control::OpenMutexDebug();
-
 	return setts;
 }
 
 
 void init_databases(const std::array<DB_Auth, DB_CNT>& dbi_a)
 {
-#ifdef __DEBUG__
-	Control::syncDebug();
-#endif
 	command_s* cmd_p = Control::get_command();
 	cmd_p->cmd = Cmd::InitDb;
 	data_s* data_p = Control::next_data(nullptr);

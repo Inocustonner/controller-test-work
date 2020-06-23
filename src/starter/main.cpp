@@ -5,85 +5,146 @@
 #include <iostream>
 
 #include <Windows.h>
+#include <tlhelp32.h>
 
-std::tuple<HANDLE, HANDLE> start_proc(const char* module_name)
+#include <thread>
+#include <chrono>
+
+void HideConsole()
 {
-	static char error_buffer[1024];
+	::ShowWindow(::GetConsoleWindow(), SW_HIDE);
+}
 
-	STARTUPINFO si = {};
-	PROCESS_INFORMATION pi = {};
+void ShowConsole()
+{
+	::ShowWindow(::GetConsoleWindow(), SW_SHOW);
+}
 
-	if (!CreateProcessA(
-		module_name,
-		nullptr,
-		NULL,
-		NULL,
-		TRUE,
-		0,
-		NULL,
-		NULL,
-		&si,
-		&pi))
+bool IsConsoleVisible()
+{
+	return (::IsWindowVisible(::GetConsoleWindow()) != FALSE);
+}
+
+// if one closes then return from function and terminate both
+void watchdog(std::vector<HANDLE> phandles)
+{
+	while (true)
 	{
-		std::cerr << "CreateProcess error : " << GetLastError() << '\n';
-		std::memset(error_buffer, '\0', std::size(error_buffer));
-		sprintf(error_buffer, "CreateProcess error : %d", GetLastError());
+		using namespace std::chrono_literals;
 
-		throw error_buffer;
+		for (HANDLE ph : phandles)
+		{
+			DWORD retcode;
+			if (GetExitCodeProcess(ph, &retcode))
+			{
+				if (retcode != STILL_ACTIVE) // means one of processes is not running anymore
+					return;
+			}
+			else
+			{
+				std::cout << "Error occured in calling GetExitCodeProcess: " << GetLastError() << '\n';
+				std::this_thread::sleep_for(30s);
+				return;
+			}
+		}
+		std::this_thread::sleep_for(1s);
 	}
+}
 
-	return { pi.hThread, pi.hProcess };
+static std::string get_module_dir() noexcept
+{
+	char path_buf[MAX_PATH + 1] = {};
+	GetModuleFileName(NULL, reinterpret_cast<char*>(path_buf), std::size(path_buf) - 1);
+
+	auto path = std::string(path_buf);
+	path.erase(std::begin(path) + path.find_last_of('\\') + 1, std::end(path));
+	return path;
 }
 
 int main()
 {
 	std::vector<HANDLE> handles;
-	std::vector<HANDLE> thread_hs;
 	handles.reserve(4);
 	try
 	{
-		Control::InitShared();
+		Control::OpenShared();
 
-		Control::CreateEventMain();
+		Control::OpenEventMain();
+		Control::syncMain();
+
 		Control::CreateEventDb();
+		Control::OpenEventDebug();
+
 		Control::CreateMutexStore();
 		Control::CreateMutexDebug();
-#ifdef __DEBUG__
-		Control::CreateEventDebug();
-#endif
-		std::tuple tup = start_proc("ControllerFree_v.3.2.exe");
-		thread_hs.push_back(std::get<0>(tup));
-		handles.push_back(std::get<1>(tup));
 
-		tup = start_proc("dbproc.exe");
-		thread_hs.push_back(std::get<0>(tup));
-		handles.push_back(std::get<1>(tup));
+		HANDLE tup = Control::find_proc("ControllerFree_v.3.2.exe");
+		handles.push_back(tup);
+		if (tup == INVALID_HANDLE_VALUE)
+		{
+			fprintf(stderr, "'find_proc(\"ControllerFree_v.3.2.exe\")' returned invalid handle: %d", GetLastError());
+			goto end;
+		}
+
+		tup = Control::start_proc((get_module_dir() + "dbproc.exe").c_str());
+		handles.push_back(tup);
+		if (tup == INVALID_HANDLE_VALUE)
+		{
+			fprintf(stderr, "'start_proc(\"dbproc.exe\")' returned invalid handle: %d", GetLastError());
+			goto end;
+		}
 	}
 	catch (std::exception& e)
 	{	
 		std::cerr << e.what() << '\n';
 		system("pause");
+		goto end;
 	}
-#ifdef __DEBUG__
-	Control::SetEventDebug();
+
+#ifndef __DEBUG__
+	HideConsole();
 #endif
-	WaitForMultipleObjects(std::size(thread_hs), thread_hs.data(), FALSE, INFINITE);
 
-	Control::get_command()->cmd = Cmd::Exit;
-	Control::SetEventMain();
-	Control::SetEventDb();
 	Control::SetEventDebug();
 
-	CloseHandle(thread_hs[0]);
+	watchdog(handles);
+
+end:
+	Control::get_command()->cmd = Cmd::Exit;
+	try
+	{
+		Control::SetEventMain();
+		Control::SetEventDb();
+	}
+	catch (const std::exception& e)
+	{
+		fprintf(stderr, "%s\n", e.what());
+#ifdef __DEBUG__
+		system("pause");
+#endif
+	}
+
+	TerminateProcess(handles[0], 0);
+	if (std::size(handles) > 1)
+		TerminateProcess(handles[1], 0);
+
 	CloseHandle(handles[0]);
+	if (std::size(handles) > 1)
+		CloseHandle(handles[1]);
 
-	CloseHandle(thread_hs[1]);
-	CloseHandle(handles[1]);
-	//to resume thread if he is waiting for an event
-
-
-
-	Control::RemoveShared();
-	Control::CloseEvents();
+	try
+	{
+		Control::CloseEvents();
+		Control::RemoveShared();
+		Control::releaseMutexDebug();
+		Control::releaseMutexStore();
+	}
+	catch (const std::exception& e)
+	{
+		fprintf(stderr, "%s\n", e.what());
+#ifdef __DEBUG__
+		system("pause");
+#endif
+	}
 	return 0;
 }
