@@ -136,8 +136,6 @@ end:
 	{
 		Control::CloseEvents();
 		Control::RemoveShared();
-		Control::releaseMutexDebug();
-		Control::releaseMutexStore();
 	}
 	catch (const std::exception& e)
 	{

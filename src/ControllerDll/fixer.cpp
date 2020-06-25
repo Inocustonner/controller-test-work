@@ -11,11 +11,11 @@
 #include <cstdlib>
 
 inline
-double phase1(const double p1, const bool id_stable)
+double phase1(const double p1, const bool is_stable)
 {
 	double corr_weight = state.corr(p1);
 
-	if (std::abs(p1 - state.p0) > store_diff)
+	if (std::abs(p1 - state.p0) > store_diff && is_stable)
 	{
 		store(state.com.c_str(), state.id.c_str(),
 			static_cast<int>(corr_weight), static_cast<int>(p1));
@@ -65,7 +65,7 @@ bool init_fixer(const char *ini_filename)
 	try
 	{
 		setts = init_settings();
-		init_databases(setts.dbi_a);
+		init_databases(setts.db_provider, setts.dbi_a);
 	}
 	catch (const ctrl::error& e)
 	{

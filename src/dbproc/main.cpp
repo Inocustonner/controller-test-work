@@ -16,14 +16,13 @@
 #include <string>
 #include <cstdarg>
 
-struct dbinf
+enum class DbProvider
 {
-	bool postgres = false;
-	bool mssql = false;
+	PostgreSQL,
+	MSSQL
 };
 
-static dbinf storedb_inf;
-static dbinf store_infodb_inf;
+DbProvider dbprovider;
 
 static command_s* command_p;
 
@@ -66,21 +65,6 @@ static void write_error(const char* err, bool to_db = true)
 	std::memcpy(data_p->body(), err, data_p->size);
 }
 
-void set_dbinf(dbinf& inf, DBEnum dbenum)
-{
-	std::string driver = conn_a[static_cast<int>(dbenum)]->getDatabaseMetaData()->getDriverName();
-	std::for_each(std::begin(driver), std::end(driver), [](char& c) { c = tolower(c); });
-
-	if (driver.find("postgres") != std::string::npos)
-	{
-		inf.postgres = true;
-	}
-	else if (driver.find("ms") != std::string::npos)
-	{
-		inf.mssql = true;
-	}
-}
-
 
 static void initdb()
 {
@@ -89,6 +73,19 @@ static void initdb()
 	try
 	{
 		data_s* data_p = Control::next_data(nullptr);
+		massert(data_p->type == DataType::Str);
+		const std::string db_provider(reinterpret_cast<const char*>(data_p->body()));
+		if (db_provider == "PostgreSQL")
+		{
+			dbprovider = DbProvider::PostgreSQL;
+		}
+		else
+		{
+			dbprovider = DbProvider::MSSQL;
+		}
+
+		data_p = Control::next_data(data_p);
+
 		while (data_p->size)
 		{
 			massert(data_p->type == DataType::Int);
@@ -102,14 +99,12 @@ static void initdb()
 			data_p = Control::next_data(data_p);
 		}
 		command_p->cmd = Cmd::Done;
+
 	} catch (odbc::Exception& e)
 	{
 		write_error(e.what());
 		command_p->cmd = Cmd::Err;
 	}
-
-	set_dbinf(store_infodb_inf, DBEnum::Store_Info);
-	set_dbinf(storedb_inf, DBEnum::Store);
 
 	Control::SetEventDb();
 }
@@ -206,10 +201,11 @@ static int inc_event_id()
 	// "SELECT nextval('event_id')" in postgres
 	odbc::PreparedStatementRef ps;
 
-	if (storedb_inf.postgres)
+	if (dbprovider == DbProvider::PostgreSQL)
 		ps = conn_a[static_cast<int>(DBEnum::Store)]->prepareStatement("SELECT nextval('event_id')");
-	else
+	else if (dbprovider == DbProvider::MSSQL)
 		ps = conn_a[static_cast<int>(DBEnum::Store)]->prepareStatement("SELECT NEXT VALUE FOR event_id");
+
 	auto rs = ps->executeQuery();
 	if (rs->next())
 	{
@@ -275,11 +271,11 @@ static void store_info()
 		ps = conn_a[static_cast<int>(DBEnum::Store_Info)]->prepareStatement(
 			assemble_query(
 				query_templ,
-				store_infodb_inf.postgres ? begin_postgres : "",
-				event_id, store_infodb_inf.postgres ? "THEN" : "",
+				dbprovider == DbProvider::PostgreSQL ? begin_postgres : "",
+				event_id, dbprovider == DbProvider::PostgreSQL ? "THEN" : "",
 				com_cstr, barcode_cstr, gn_cstr, fio.c_str(), event_id,
 				event_id, com_cstr, barcode_cstr, gn_cstr, fio.c_str(),
-				store_infodb_inf.postgres ? end_postgres : "" ));
+				dbprovider == DbProvider::PostgreSQL ? end_postgres : "" ));
 
 		ps->executeUpdate();
 

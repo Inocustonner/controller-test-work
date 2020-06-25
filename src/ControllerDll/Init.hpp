@@ -40,8 +40,9 @@ struct Settings
 	std::vector<Port_Info> pi_v;
 	std::array<DB_Auth, DB_CNT> dbi_a;
 	std::string suffix = "";
+	std::string db_provider = "Microsoft SQL Server";
 	bool udentified_car_allowed = false;
 };
 
 const Settings init_settings();
-void init_databases(const std::array<DB_Auth, DB_CNT>& dbi_a);
+void init_databases(const std::string& db_provider, const std::array<DB_Auth, DB_CNT>& dbi_a);

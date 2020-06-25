@@ -23,7 +23,8 @@ constexpr std::array code_msg =
 	MSG(8, "Error driver not found\n",			"Ошибка: водитель не найден в датабазе"),
 	MSG(9, "Error decoding ini file\n",         "Ошибка: не удалось расшифровать фаил настроек"),
 	MSG(10, "Error connecting to db\n", 		"Ошибка: не удалось подключиться к одной из баз данных"),
-	MSG(11, "Error storing to store_info\n",    "Ошибка: записи в store_info")
+	MSG(11, "Error storing to store_info\n",    "Ошибка: записи в store_info"),
+	MSG(12, "Error openning ini file\n",		"Ошибка: не удалось открыть ini файл")
 };
 
 #pragma warning(push)

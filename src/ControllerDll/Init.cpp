@@ -89,6 +89,8 @@ static void default_section(Section_Map& default_map, Settings& setts) noexcept
 
 	set_if(default_map, "suffix", setts.suffix);
 
+	set_if(default_map, "database-provider", setts.db_provider);
+
 	if (setts.suffix == "")
 		dprintf("No suffix set");
 	else if (setts.suffix == "CR")
@@ -200,7 +202,10 @@ const Settings init_settings()
 	inipp::Ini<char> ini;
 	FILE* fp = fopen(path_to_ini.c_str(), "rb");
 	if (!fp)
+	{
+		dprintf(msg<12>());
 		throw ctrl::error("Failed to open file %s\n", path_to_ini.c_str());
+	}
 
 	std::string ss;
 	try
@@ -249,11 +254,18 @@ const Settings init_settings()
 }
 
 
-void init_databases(const std::array<DB_Auth, DB_CNT>& dbi_a)
+void init_databases(const std::string& db_provider, const std::array<DB_Auth, DB_CNT>& dbi_a)
 {
 	command_s* cmd_p = Control::get_command();
 	cmd_p->cmd = Cmd::InitDb;
 	data_s* data_p = Control::next_data(nullptr);
+
+	//write dbprovider
+	data_p->type = DataType::Str;
+	data_p->size = db_provider.size() + 1;
+	std::memcpy(data_p->body(), db_provider.c_str(), data_p->size);
+
+	data_p = Control::next_data(data_p);
 
 	int i = static_cast<int>((DBEnum)(0)); // DBEnum iterator knda
 	for (const DB_Auth& auth : dbi_a)
@@ -275,6 +287,7 @@ void init_databases(const std::array<DB_Auth, DB_CNT>& dbi_a)
 	if (cmd_p->cmd != Cmd::Done)
 	{
 		data_p = Control::next_data(nullptr);
+		dprintf(msg<10>());
 		throw ctrl::error("Unable to create odbc connections %s\n", reinterpret_cast<const char*>(data_p->body()));
 	}
 }
