@@ -40,7 +40,7 @@ std::vector<std::string> parse_barcode(std::string s, char delim)
 	constexpr int car_id_size = 8;
 	constexpr int driver_id_size = 8;
 
-	//	...01#12345678#87654321#\r
+	//	...#01#12345678#87654321#\r
 	size_t pos = 0;
 	pos = s.substr(0, std::size(s) - 1).rfind(delim);
 	vec.insert(std::begin(vec), { std::begin(s) + pos + 1, std::begin(s) + pos + 1 + driver_id_size });
@@ -59,6 +59,9 @@ void com_reader(std::vector<Port_Info> pi_v, const std::string suffix, bool uden
 	try
 	{
 		std::vector<serial::Serial> ports(std::size(pi_v));
+		if (std::size(pi_v) == 0)
+			dprintf(msg<13>());
+
 		for (size_t i = 0; i < std::size(pi_v); ++i)
 		{
 			ports[i].setPort(pi_v[i].name);

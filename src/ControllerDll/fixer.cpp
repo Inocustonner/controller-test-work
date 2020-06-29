@@ -14,11 +14,14 @@ inline
 double phase1(const double p1, const bool is_stable)
 {
 	double corr_weight = state.corr(p1);
-
-	if (std::abs(p1 - state.p0) > store_diff && is_stable)
+	if (is_stable)
 	{
-		store(state.com.c_str(), state.id.c_str(),
-			static_cast<int>(corr_weight), static_cast<int>(p1));
+		if (std::abs(p1 - state.p0s) > store_diff && is_stable)
+		{
+			store(state.com.c_str(), state.id.c_str(),
+				static_cast<int>(corr_weight), static_cast<int>(p1));
+		}
+		state.p0s = p1;
 	}
 	return corr_weight;
 }

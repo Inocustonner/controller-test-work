@@ -81,7 +81,7 @@ static void default_section(Section_Map& default_map, Settings& setts) noexcept
 	inv_if(default_map, "min_weight",
 		[](auto& pair_str) { set_default_min_weight(std::stod(pair_str->second)); });
 
-	inv_if(default_map, "udentified-car-allowed",
+	inv_if(default_map, "unidentified-car-allowed",
 		[&setts](auto& pair_str) { if (pair_str->second == "on") setts.udentified_car_allowed = true; else setts.udentified_car_allowed = false; });
 
 	inv_if(default_map, "message-duration",
@@ -104,20 +104,11 @@ static void default_section(Section_Map& default_map, Settings& setts) noexcept
 	else
 		dprintf("Custom suffix:\n\t%s", setts.suffix.c_str());
 
-	DB_Auth& cars = setts.dbi_a[static_cast<int>(DBEnum::Cars)];
-	cars.conn_str = get(default_map, "carsdb", "");
+	DB_Auth& cars = setts.dbi_a[static_cast<int>(DBEnum::W_Base)];
+	cars.conn_str = get(default_map, "w_base", "");
 
-	DB_Auth& store = setts.dbi_a[static_cast<int>(DBEnum::Store)];
-	store.conn_str = get(default_map, "storedb", "");
-
-	DB_Auth& store_info = setts.dbi_a[static_cast<int>(DBEnum::Store_Info)];
-	store_info.conn_str = get(default_map, "store_infodb", "");
-
-	DB_Auth& debug = setts.dbi_a[static_cast<int>(DBEnum::Debug)];
-	debug.conn_str = get(default_map, "debugdb", "");
-
-	DB_Auth& drivers = setts.dbi_a[static_cast<int>(DBEnum::Drivers)];
-	drivers.conn_str = get(default_map, "driversdb", "");
+	DB_Auth& store = setts.dbi_a[static_cast<int>(DBEnum::W_Ext)];
+	store.conn_str = get(default_map, "w_ext", "");
 }
 
 

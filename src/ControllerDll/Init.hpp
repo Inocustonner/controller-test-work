@@ -26,13 +26,10 @@ struct Port_Info
 
 enum class DBEnum
 {
-	Cars = 0,
-	Store = 1,
-	Store_Info = 2,
-	Debug = 3,
-	Drivers = 4,
+	W_Base = 0,
+	W_Ext = 1
 };
-constexpr auto DB_CNT = 5; // cars, store, store_info, debug
+constexpr auto DB_CNT = 2; // cars, store, store_info, debug
 
 
 struct Settings

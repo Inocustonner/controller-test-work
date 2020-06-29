@@ -117,8 +117,8 @@ void cars()
 		data_s* data_p = Control::next_data(nullptr);
 		massert(data_p->type == DataType::Str);
 		odbc::PreparedStatementRef ps 
-			= conn_a[static_cast<int>(DBEnum::Cars)]->prepareStatement(
-				assemble_query("SELECT weight, corr, gn FROM cars_table WHERE id='%s'", reinterpret_cast<const char*>(data_p->body())));
+			= conn_a[static_cast<int>(DBEnum::W_Ext)]->prepareStatement(
+				assemble_query("SELECT weight, corr, gn FROM cars WHERE id='%s'", reinterpret_cast<const char*>(data_p->body())));
 		odbc::ResultSetRef res_ref = ps->executeQuery();
 
 		if (res_ref->next())
@@ -180,7 +180,7 @@ static void store()
 	int inp_weight = *reinterpret_cast<int*>(data_p->body());
 	try
 	{
-		odbc::PreparedStatementRef ps = conn_a[static_cast<int>(DBEnum::Store)]->prepareStatement(
+		odbc::PreparedStatementRef ps = conn_a[static_cast<int>(DBEnum::W_Ext)]->prepareStatement(
 			assemble_query("INSERT INTO info (com, event_id, id, weight, inp_weight) VALUES('%s', %d, '%s', %d, %d)", com_cstr, event_id, id_cstr, weight, inp_weight));
 
 		ps->executeUpdate();
@@ -202,9 +202,9 @@ static int inc_event_id()
 	odbc::PreparedStatementRef ps;
 
 	if (dbprovider == DbProvider::PostgreSQL)
-		ps = conn_a[static_cast<int>(DBEnum::Store)]->prepareStatement("SELECT nextval('event_id')");
+		ps = conn_a[static_cast<int>(DBEnum::W_Ext)]->prepareStatement("SELECT nextval('event_id')");
 	else if (dbprovider == DbProvider::MSSQL)
-		ps = conn_a[static_cast<int>(DBEnum::Store)]->prepareStatement("SELECT NEXT VALUE FOR event_id");
+		ps = conn_a[static_cast<int>(DBEnum::W_Ext)]->prepareStatement("SELECT NEXT VALUE FOR event_id");
 
 	auto rs = ps->executeQuery();
 	if (rs->next())
@@ -231,7 +231,7 @@ static void store_info()
 		data_p = Control::next_data(data_p);
 		massert(data_p->type == DataType::Str);
 
-		odbc::PreparedStatementRef ps = conn_a[static_cast<int>(DBEnum::Drivers)]->prepareStatement(assemble_query("SELECT fio FROM drivers WHERE id=%s",
+		odbc::PreparedStatementRef ps = conn_a[static_cast<int>(DBEnum::W_Ext)]->prepareStatement(assemble_query("SELECT fio FROM drivers WHERE id=%s",
 				reinterpret_cast<const char*>(data_p->body())));
 
 		odbc::ResultSetRef res_ref = ps->executeQuery();
@@ -268,7 +268,7 @@ static void store_info()
 			"ELSE\n"
 			"INSERT INTO info(event_id, com, barcode, gn, fio) VALUES(%d, '%s', '%s', '%s', '%s');"
 			"%s";
-		ps = conn_a[static_cast<int>(DBEnum::Store_Info)]->prepareStatement(
+		ps = conn_a[static_cast<int>(DBEnum::W_Base)]->prepareStatement(
 			assemble_query(
 				query_templ,
 				dbprovider == DbProvider::PostgreSQL ? begin_postgres : "",
@@ -297,8 +297,8 @@ static void store_info()
 
 static void debug()
 {
-	if (conn_a[static_cast<int>(DBEnum::Debug)].isNull() ||
-		!conn_a[static_cast<int>(DBEnum::Debug)]->connected())
+	if (conn_a[static_cast<int>(DBEnum::W_Ext)].isNull() ||
+		!conn_a[static_cast<int>(DBEnum::W_Ext)]->connected())
 		goto end_sync;
 
 	data_s* data_p = Control::next_data(nullptr);
@@ -311,7 +311,7 @@ static void debug()
 
 	try
 	{
-		odbc::PreparedStatementRef ps = conn_a[static_cast<int>(DBEnum::Debug)]->prepareStatement(
+		odbc::PreparedStatementRef ps = conn_a[static_cast<int>(DBEnum::W_Ext)]->prepareStatement(
 			assemble_query("INSERT INTO debug(code, message) VALUES(%d, '%s')", code, str));
 		ps->executeUpdate();
 
@@ -358,7 +358,7 @@ int main()
 				store_info();
 				break;
 			case Cmd::Store_Debug:
-				if (conn_a[static_cast<int>(DBEnum::Debug)]->connected())
+				if (conn_a[static_cast<int>(DBEnum::W_Ext)]->connected())
 					debug();
 				break;
 			case Cmd::Exit:

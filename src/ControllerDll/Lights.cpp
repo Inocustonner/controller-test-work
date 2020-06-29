@@ -61,6 +61,7 @@ void light(LightsEnum l)
 
 	STARTUPINFO si = { sizeof(si) };
 	si.wShowWindow = SW_HIDE;
+	si.dwFlags = STARTF_USESHOWWINDOW;
 
 	PROCESS_INFORMATION pi = {};
 	// std::cout << cmd << std::endl;
@@ -69,7 +70,7 @@ void light(LightsEnum l)
 						NULL,
 						NULL,
 						FALSE,
-						0,
+						CREATE_NO_WINDOW,
 						NULL,
 						NULL,
 						&si,

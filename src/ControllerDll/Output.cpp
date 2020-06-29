@@ -101,7 +101,7 @@ void dprintf(const msg_t msg)
 		fprintf(stderr, "%s\n", std::get<1>(msg));
 	if (std::get<0>(msg) != prev_code)
 	{
-		mMsgBox(std::get<2>(msg), L"ERROR", msg_duration);
+		mMsgBox(L"MESSAGE", std::get<2>(msg) , msg_duration);
 		if (log_lvl < 2) // avoid multiple writing to db
 		{
 			dblog(std::get<0>(msg), std::get<1>(msg));

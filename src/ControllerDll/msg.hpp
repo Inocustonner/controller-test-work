@@ -24,7 +24,8 @@ constexpr std::array code_msg =
 	MSG(9, "Error decoding ini file\n",         "Ошибка: не удалось расшифровать фаил настроек"),
 	MSG(10, "Error connecting to db\n", 		"Ошибка: не удалось подключиться к одной из баз данных"),
 	MSG(11, "Error storing to store_info\n",    "Ошибка: записи в store_info"),
-	MSG(12, "Error openning ini file\n",		"Ошибка: не удалось открыть ini файл")
+	MSG(12, "Error openning ini file\n",		"Ошибка: не удалось открыть ini файл"),
+	MSG(13, "Warning no COM ports connected\n", "Предупреждение: нету подключенных COM портов")
 };
 
 #pragma warning(push)
