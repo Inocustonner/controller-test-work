@@ -101,9 +101,7 @@ int main()
 		goto end;
 	}
 
-#ifndef __DEBUG__
 	HideConsole();
-#endif
 
 	Control::SetEventDebug();
 
