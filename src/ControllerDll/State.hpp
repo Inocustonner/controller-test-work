@@ -11,8 +11,8 @@ struct State
 
 	int event_id		= 0;
 
-	double p0			= 0;
-	double p0s			= 0; // prev stable
+	double p0			= 0; // prev weight
+	double p0s			= 0; // prev stable weight
 	// int phase			= 0;
 	std::string id	= "";		// for dbs
 	std::string com	= "";		// for dbs

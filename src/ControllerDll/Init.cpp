@@ -89,7 +89,8 @@ static void default_section(Section_Map& default_map, Settings& setts) noexcept
 
 	set_if(default_map, "suffix", setts.suffix);
 
-	set_if(default_map, "database-provider", setts.db_provider);
+	// temporarily removed because no capability with ms sql created yet
+	// set_if(default_map, "database-provider", setts.db_provider);
 
 	if (setts.suffix == "")
 		dprintf("No suffix set");

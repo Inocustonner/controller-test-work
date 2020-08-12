@@ -13,19 +13,22 @@ static LightsEnum last_light;
 
 void set_light_deny(const std::string& deny)
 {
-	deny_cmd = CMD_PREFIX + deny;
+	if (deny != "")
+		deny_cmd = CMD_PREFIX + deny;
 }
 
 
 void set_light_acc(const std::string& acc)
 {
-	acc_cmd = CMD_PREFIX + acc;
+	if (acc != "")
+		acc_cmd = CMD_PREFIX + acc;
 }
 
 
 void set_light_wait(const std::string& wait)
 {
-	wait_cmd = CMD_PREFIX + wait;
+	if (wait != "")
+		wait_cmd = CMD_PREFIX + wait;
 }
 
 

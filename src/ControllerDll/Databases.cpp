@@ -76,9 +76,10 @@ void store_info(const char* com, const char* barcode, const char* gn, const char
 	// no need to wait
 	Control::SetEventMain();
 	Control::syncDb();
+
+	data_p = Control::next_data();
 	if (cmd_p->cmd == Cmd::Done)
 	{
-		data_p = Control::next_data();
 		massert(data_p->type == DataType::Int);
 		state.event_id = *reinterpret_cast<int*>(data_p->body());
 	}

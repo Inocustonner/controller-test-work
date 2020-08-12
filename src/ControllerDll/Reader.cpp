@@ -86,10 +86,18 @@ void com_reader(std::vector<Port_Info> pi_v, const std::string suffix, bool uden
 		constexpr size_t max_line_sz = (1 << 16);
 		if (authorized())
 		{
-			dprintf(msg<0>());
-			serial_port.readline(max_line_sz, suffix);
-			light(LightsEnum::Deny);
-			continue;
+			if (state.p0 < state.min_weight)
+			{
+				reset_state();
+				dprintf(msg<14>());
+			}
+			else
+			{
+				dprintf(msg<0>());
+				serial_port.readline(max_line_sz, suffix);
+				light(LightsEnum::Deny);
+				continue;
+			}
 		}
 		std::string barcode = serial_port.readline(max_line_sz, suffix);
 

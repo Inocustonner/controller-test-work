@@ -12,3 +12,4 @@ src/**.txt
 src/**Old*
 !src/**CMakeLists.txt
 copy_batch.bat
+copy.bat

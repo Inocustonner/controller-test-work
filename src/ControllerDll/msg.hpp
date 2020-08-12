@@ -11,7 +11,7 @@ constexpr msg_t _msg(int code);
 constexpr std::array code_msg =
 {
 	// -1 is for don't standart messages
-	MSG(0, "Error: double authorization\n",	"Ошибка: двойная авторизация"),
+	MSG(0, "Error: double authorization\n",	"Ошибка: двойная авторизация, когда машина на весах не возможна переавторизация!"),
 	// MSG(1, "Error: Unauthorized driver\n",		"Ошибка водитель не авторизован"),
 	MSG(1, "Error: Unauthorized driver\n",		"Ошибка: не авторизованный водитель"),
 	MSG(2, "Error: Invalid barcode\n",			"Ошибка: не верный формат штрих кода"),
@@ -25,7 +25,8 @@ constexpr std::array code_msg =
 	MSG(10, "Error connecting to db\n", 		"Ошибка: не удалось подключиться к одной из баз данных"),
 	MSG(11, "Error storing to store_info\n",    "Ошибка: записи в store_info"),
 	MSG(12, "Error openning ini file\n",		"Ошибка: не удалось открыть ini файл"),
-	MSG(13, "Warning no COM ports connected\n", "Предупреждение: нету подключенных COM портов")
+	MSG(13, "Warning no COM ports connected\n", "Предупреждение: нету подключенных COM портов"),
+	MSG(14, "Warning reauthorization, new values will be used\n", "Предупреждение: последние полученные данные будут использоваться")
 };
 
 #pragma warning(push)

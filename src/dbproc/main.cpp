@@ -46,6 +46,7 @@ static void debug();
 static void write_error(const char* err, bool to_db = true)
 {
 	data_s* data_p = Control::next_data(nullptr);
+	data_s* reason_p = nullptr;
 	int len = std::strlen(err) + 1;
 	if (to_db)
 	{
@@ -53,16 +54,16 @@ static void write_error(const char* err, bool to_db = true)
 		data_p->size = sizeof(int);
 		*reinterpret_cast<int*>(data_p->body()) = -1;
 
-		data_p = Control::next_data(data_p);
-		data_p->type = DataType::Str;
-		data_p->size = len;
-		std::memcpy(data_p->body(), err, data_p->size);
+		reason_p = Control::next_data(data_p);
+		reason_p->type = DataType::Str;
+		reason_p->size = len;
+		std::memcpy(reason_p->body(), err, reason_p->size);
 		debug();
 	}
-	data_p = Control::next_data(nullptr);
-	data_p->type = DataType::Str;
-	data_p->size = len;
-	std::memcpy(data_p->body(), err, data_p->size);
+	reason_p = Control::next_data(nullptr);
+	reason_p->type = DataType::Str;
+	reason_p->size = len;
+	std::memcpy(reason_p->body(), err, reason_p->size);
 }
 
 

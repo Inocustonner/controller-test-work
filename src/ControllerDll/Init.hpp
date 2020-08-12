@@ -37,7 +37,7 @@ struct Settings
 	std::vector<Port_Info> pi_v;
 	std::array<DB_Auth, DB_CNT> dbi_a;
 	std::string suffix = "";
-	std::string db_provider = "Microsoft SQL Server";
+	std::string db_provider = "PostgreSQL";
 	bool udentified_car_allowed = false;
 };
 
