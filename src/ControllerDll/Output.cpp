@@ -1,11 +1,11 @@
 #include "Output.hpp"
-#include "mmsg/mmsg.hpp"
+#include "mmsg.hpp"
 #include <Control.hpp>
 
 // https://github.com/SAP/odbc-cpp-wrapper
-#include <odbc/Connection.h>
-#include <odbc/Exception.h>
-#include <odbc/PreparedStatement.h>
+//#include <odbc/Connection.h>
+//#include <odbc/Exception.h>
+//#include <odbc/PreparedStatement.h>
 
 #include <tuple>
 #include <array>
@@ -98,13 +98,22 @@ void dprintf(const msg_t msg)
 	static int prev_code;
 	// const char* str = make_buf("%s", std::get<1>);
 	if (log_lvl > 0)
-		fprintf(stderr, "%s\n", std::get<1>(msg));
-	if (std::get<0>(msg) != prev_code)
+		fprintf(stderr, "%s\n", std::get<2>(msg));
+	// if message is repeated or if last message != current message
+	if (std::get<4>(msg) == true || std::get<0>(msg) != prev_code)
 	{
-		mMsgBox(L"MESSAGE", std::get<2>(msg) , msg_duration);
+		if (std::get<1>(msg) == MsgType::Error)
+		{
+			mMsgBox(L"Error", std::get<3>(msg), msg_duration);
+		}
+		else
+		{
+			mMsgBox(L"Warning", std::get<3>(msg), msg_duration);
+		}
+
 		if (log_lvl < 2) // avoid multiple writing to db
 		{
-			dblog(std::get<0>(msg), std::get<1>(msg));
+			dblog(std::get<0>(msg), std::get<2>(msg));
 		}
 	}
 	prev_code = std::get<0>(msg);

@@ -1,20 +1,37 @@
 #define UNICODE
 #define _UNICODE
 #include <windows.h>
+#undef min
+
 #include <cstdio>
 #include <string>
 #include <tchar.h>
+#include <algorithm>
 
 #define CLOSE_TIMER_IDI 0xD13
 
 HINSTANCE hInst;
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
 
-LPWSTR title;
-LPWSTR body;
+std::wstring title;
+std::wstring body;
 
-int text_center_offset = 30;// 10px
+void str_replace(std::wstring& str, const std::wstring& pattern, const std::wstring& replacement)
+{
+    size_t pos = str.find(pattern, 0);
+    while (pos != std::wstring::npos)
+    {
+        str.replace(std::begin(str) + pos,
+            std::min(std::begin(str) + pos + pattern.length(), std::end(str)),
+            replacement);
+        pos = str.find(pattern, pos + pattern.length());
+    }
+}
+
+DWORD draw_text_flags = DT_CENTER | DT_EXTERNALLEADING | DT_WORDBREAK;
 int window_w, window_h;
+int button_w = 90, button_h = 30;
+
 int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR pwCmdLine, int nCmdShow)
 {
 	int argc;
@@ -40,11 +57,8 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR pwCmdLi
         title = argv[2];
         ms = wcstol(argv[3], &_, 10);
     }
-
-	//printf("displayinh.\n");
-	//MessageBoxW(NULL,
-	//			argv[0],
-	//			argv[1], MB_OK);
+    // replace \\n with \n
+    str_replace(body, L"\\n", L"\n");
 
     WNDCLASSEXW wcex;
 
@@ -55,13 +69,28 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR pwCmdLi
     wcex.cbClsExtra = 0;
     wcex.cbWndExtra = 0;
     wcex.hInstance = hInstance;
-    wcex.hIcon = LoadIcon(hInstance, IDI_APPLICATION);
+
+    if (title == L"Error")
+    {
+        wcex.hIcon = LoadIcon(NULL, IDI_ERROR);
+        wcex.hIconSm = LoadIcon(NULL, IDI_ERROR);
+    }
+    else if (title == L"Warning")
+    {
+        wcex.hIcon = LoadIcon(NULL, IDI_WARNING);
+        wcex.hIconSm = LoadIcon(NULL, IDI_WARNING);
+    }
+    else
+    {
+        wcex.hIcon = LoadIcon(NULL, IDI_APPLICATION);
+        wcex.hIconSm = LoadIcon(NULL, IDI_APPLICATION);
+    }
+
     wcex.hCursor = LoadCursor(NULL, IDC_ARROW);
     wcex.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);
     wcex.lpszMenuName = NULL;
     wcex.lpszClassName = argv[0];
-    wcex.hIconSm = LoadIcon(wcex.hInstance, IDI_APPLICATION);
-
+    // wcex.hIconSm = LoadIcon(wcex.hInstance, IDI_ERROR)
     if (!RegisterClassEx(&wcex))
     {
         MessageBox(NULL,
@@ -77,30 +106,21 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR pwCmdLi
     RECT r1 = { 0, 0, 0, 0 };
     RECT r2 = {};
 
-    HFONT hFont, hOldFont;
-
     // Retrieve a handle to the variable stock font.  
 
-    int text_sz;
 
-    DrawTextW(hDC, body, _tcslen(body), &r1, DT_CALCRECT);
-    text_sz = r1.right;
+    DrawTextW(hDC, body.c_str(), body.length(), &r1, DT_CALCRECT | DT_CENTER);
 
-    r1.right += text_center_offset * 2;
-    r1.bottom += 80; // adjustment
-
-    DrawTextW(hDC, title, _tcslen(title), &r2, DT_CALCRECT);
-    r2.right += text_center_offset * 2;
+    DrawTextW(hDC, title.c_str(), title.length(), &r2, DT_CALCRECT);
     ReleaseDC(NULL, hDC);
 
     r1.right = max(max(r1.right, r2.right), 300);
 
-    AdjustWindowRect(&r1, wcex.style, FALSE);
+    AdjustWindowRect(&r1, wcex.style, TRUE);
 
     window_w = r1.right - r1.left;
-    window_h = r1.bottom - r1.top;
+    window_h = r1.bottom - r1.top + button_h + 30;
 
-    text_center_offset = 5;
     // Store instance handle in our global variable
     hInst = hInstance;
 
@@ -119,7 +139,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR pwCmdLi
 
     HWND hWnd = CreateWindowW(
         wcex.lpszClassName,
-        title,
+        title.c_str(),
         WS_OVERLAPPEDWINDOW,
         (screen_w - window_w) / 2, (screen_h - window_h) / 2,
         window_w, window_h,
@@ -168,8 +188,10 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     {
     case WM_CREATE:
     {
-        int width = 90, height = 30;
-        int x = (window_w - width) / 2, y = window_h - height - 40;
+        RECT rc = {};
+        GetClientRect(hWnd, &rc);
+
+        int x = ((rc.right - rc.left) - button_w) / 2, y = (rc.bottom - rc.top) - button_h - 5;
 
         HWND hwndButton = CreateWindowW(
             L"BUTTON",  // Predefined class; Unicode assumed 
@@ -177,8 +199,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_DEFPUSHBUTTON,  // Styles 
             x,         // x position 
             y,         // y position 
-            width,        // Button width
-            height,        // Button height
+            button_w,        // Button width
+            button_h,        // Button height
             hWnd,     // Parent window
             NULL,       // No menu.
             hInst,
@@ -194,10 +216,10 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         // Here your application is laid out.
         // For this introduction, we just print out "Hello, Windows desktop!"
         // in the top left corner.
-        TextOutW(hdc,
-            text_center_offset, 5,
-            body, _tcslen(body));
-        // End application-specific layout section.
+        RECT rc = {};
+        GetClientRect(hWnd, &rc);
+
+        DrawTextW(hdc, body.c_str(), body.length(), &rc, DT_CENTER | DT_EXTERNALLEADING | DT_WORDBREAK);
 
         EndPaint(hWnd, &ps);
     }break;

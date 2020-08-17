@@ -16,6 +16,7 @@ add_library(controller SHARED dllmain.cpp
 	Reader.cpp 
 	SerialPool.cpp
 	Lights.cpp
+	mmsg.cpp
 	
 	encoding/Encode.cpp
 	encoding/MD5.cpp
@@ -26,8 +27,7 @@ target_link_libraries(controller serial.lib
 								 dllInj.lib 
 								 ODBC::ODBC 
 								 odbccpp_static.lib 
-								 Ws2_32.lib							 
-								 mmsg)
+								 Ws2_32.lib)
 								 
 set_property(TARGET controller PROPERTY
   MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<OR:$<CONFIG:Debug>,$<CONFIG:RelWithDebInfo>>:Debug>DLL")
