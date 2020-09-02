@@ -2,7 +2,6 @@
 
 #include <boost/interprocess/shared_memory_object.hpp>
 #include <boost/interprocess/mapped_region.hpp>
-
 #include <cstdio>
 #include <windows.h>
 #include <TLHelp32.h>

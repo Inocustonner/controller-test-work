@@ -6,31 +6,65 @@ link_directories(${LnkLibDirs})
 
 add_definitions(/D_CRT_SECURE_NO_WARNINGS /DODBC_STATIC)
 find_package(ODBC)
-add_library(controller SHARED dllmain.cpp
-	dll.cpp 
-	fixer.cpp 
-	Output.cpp 
-	State.cpp 
-	Databases.cpp 
-	Init.cpp 
-	Reader.cpp 
-	SerialPool.cpp
-	Lights.cpp
-	mmsg.cpp
+
+set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL")
+
+add_library(controller_core STATIC 
+	core/fixer.cpp 
+	core/Output.cpp 
+	core/State.cpp 
+	core/Databases.cpp 
+	core/Init.cpp 
+	core/Reader.cpp 
+	core/SerialPool.cpp
+	core/Lights.cpp
+	core/mmsg.cpp
 	
-	encoding/Encode.cpp
-	encoding/MD5.cpp
+	core/encoding/Encode.cpp
+	core/encoding/MD5.cpp
 	
 	${CMAKE_SOURCE_DIR}/src/Control/Control.cpp)
 	
-target_link_libraries(controller serial.lib 
-								 dllInj.lib 
-								 ODBC::ODBC 
-								 odbccpp_static.lib 
-								 Ws2_32.lib)
-								 
-set_property(TARGET controller PROPERTY
-  MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<OR:$<CONFIG:Debug>,$<CONFIG:RelWithDebInfo>>:Debug>DLL")
-  
-target_compile_options(controller PRIVATE "$<$<CONFIG:Release>:/GL>")
-target_link_options(controller PRIVATE "$<$<CONFIG:Release>:/LTCG>")
+target_link_libraries(controller_core serial.lib 
+								  dllInj.lib 
+								  ODBC::ODBC 
+								  odbccpp_static.lib
+								  Ws2_32.lib)
+set_property(TARGET controller_core APPEND PROPERTY INTERFACE_INCLUDE_DIRECTORIES
+ $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/core>
+ )
+set_target_properties(controller_core
+PROPERTIES
+ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_ARCHIVE_OUTPUT_DIRECTORY}/controller_core"
+LIBRARY_OUTPUT_DIRECTORY "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/controller_core"
+RUNTIME_OUTPUT_DIRECTORY "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/controller_core"
+)
+
+								  
+#controller dll						  
+add_library(controller_dll SHARED dll/dllmain.cpp
+	dll/dll.cpp)
+target_link_libraries(controller_dll controller_core)
+target_compile_options(controller_dll PRIVATE "$<$<CONFIG:Release>:/GL>")
+target_link_options(controller_dll PRIVATE "$<$<CONFIG:Release>:/LTCG>")
+set_target_properties(controller_dll
+    PROPERTIES
+    ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_ARCHIVE_OUTPUT_DIRECTORY}/contoller_dll"
+    LIBRARY_OUTPUT_DIRECTORY "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/contoller_dll"
+    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/contoller_dll"
+	)
+
+
+#controller_standalone
+add_executable(controller_standalone standalone/main.cpp
+									 standalone/Retranslator.cpp
+									 standalone/Commands.cpp)
+target_link_libraries(controller_standalone controller_core)
+set_target_properties(controller_standalone
+    PROPERTIES
+    ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_ARCHIVE_OUTPUT_DIRECTORY}/controller_standalone"
+    LIBRARY_OUTPUT_DIRECTORY "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/controller_standalone"
+    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/controller_standalone"
+	)
+#target_compile_options(controller_standalone PRIVATE "$<$<CONFIG:Release>:/GL>")
+#target_link_options(controller_standalone PRIVATE "$<$<CONFIG:Release>:/LTCG>")

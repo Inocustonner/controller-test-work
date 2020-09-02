@@ -1,5 +1,5 @@
 #include <Control.hpp>
-#include "../ControllerDll/Init.hpp" // to get DB_CNT and DbEnum
+#include "../ControllerDll/core/Init.hpp" // to get DB_CNT and DbEnum
 
 #include <odbc/Connection.h>
 #include <odbc/Environment.h>

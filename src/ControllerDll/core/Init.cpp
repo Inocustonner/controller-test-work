@@ -172,7 +172,6 @@ const Settings init_settings()
 		catch (const std::exception& e)
 		{ }
 
-		CloseHandle(h);
 		std::exit(1);
 	}
 	else
