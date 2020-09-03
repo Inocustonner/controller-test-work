@@ -54,31 +54,38 @@ void watchdog(std::vector<HANDLE> phandles)
 static std::string get_module_dir() noexcept
 {
 	char path_buf[MAX_PATH + 1] = {};
-	GetModuleFileName(NULL, reinterpret_cast<char*>(path_buf), std::size(path_buf) - 1);
+	GetModuleFileNameA(NULL, reinterpret_cast<char*>(path_buf), std::size(path_buf) - 1);
 
 	auto path = std::string(path_buf);
 	path.erase(std::begin(path) + path.find_last_of('\\') + 1, std::end(path));
 	return path;
 }
 
-int main()
+int main(int argc, char *argv[])
 {
+	const char *leading_proc = "ControllerFree_v.3.2.exe";
+	if (argc == 2) {
+		leading_proc = argv[1];
+	}
+
 	std::vector<HANDLE> handles;
 	handles.reserve(4);
 	try
 	{
 		Control::OpenShared();
 
-		Control::OpenEventMain();
-		Control::syncMain();
+		Control::CreateEventMain();
+		Control::UnsetEventMain();
 
 		Control::CreateEventDb();
-		Control::OpenEventDebug();
+		// Control::OpenEventDebug();
 
 		Control::CreateMutexStore();
 		Control::CreateMutexDebug();
+		
+		Control::SetEventMain();
 
-		HANDLE tup = Control::find_proc("ControllerFree_v.3.2.exe");
+		HANDLE tup = Control::find_proc(leading_proc);
 		handles.push_back(tup);
 		if (tup == INVALID_HANDLE_VALUE)
 		{
@@ -101,9 +108,10 @@ int main()
 		goto end;
 	}
 
+#if 0
 	HideConsole();
-
-	Control::SetEventDebug();
+#endif
+	// Control::SetEventDebug();
 
 	watchdog(handles);
 

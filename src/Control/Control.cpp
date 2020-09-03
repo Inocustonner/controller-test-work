@@ -86,8 +86,8 @@ HANDLE start_proc(const char* module_name)
 	PROCESS_INFORMATION pi = {};
 
 	if (!CreateProcessA(
-		module_name,
 		nullptr,
+		(LPSTR)module_name,
 		NULL,
 		NULL,
 		TRUE,
@@ -246,12 +246,9 @@ void OpenEvent(HANDLE& event, const wchar_t* ev_name)
 	FALSE,
 	ev_name);
 
-	if (event_main == NULL)
+	if (event == NULL)
 	{
-		std::memset(error_buffer, '\0', std::size(error_buffer));
-		sprintf(error_buffer, "Error openning %ls event: %d", ev_name, GetLastError());
-		throw error_buffer;
-		// get message box showing error
+		CreateEvent(event, ev_name);
 	}
 }
 

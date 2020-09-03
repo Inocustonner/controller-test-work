@@ -15,7 +15,7 @@ public:
   ~Retranslator();
 
   // can be set only once
-  bool setModificator(std::function<void(bytestring &)> modificator);
+  void setModificator(std::function<void(bytestring &)> modificator);
   void start();
 
 private:

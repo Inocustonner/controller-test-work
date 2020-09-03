@@ -1,9 +1,8 @@
 #include "Commands.hpp"
+#include "macro.hpp"
 
 #include <algorithm>
 #include <array>
-
-#define ITER_RANGE(begin, end) (auto it = begin; it != end; ++it)
 
 constexpr std::uint8_t operator"" _u8(unsigned long long value)
 {

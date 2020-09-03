@@ -26,7 +26,7 @@ using Sections_Map = inipp::Ini<char>::Sections;
 static std::string get_module_dir() noexcept
 {
 	char path_buf[MAX_PATH + 1] = {};
-	GetModuleFileName(NULL, reinterpret_cast<char*>(path_buf), std::size(path_buf) - 1);
+	GetModuleFileNameA(NULL, reinterpret_cast<char*>(path_buf), std::size(path_buf) - 1);
 	
 	auto path = std::string(path_buf);
 	path.erase(std::begin(path) + path.find_last_of('\\') + 1, std::end(path));
@@ -65,8 +65,10 @@ static void debug_section(Section_Map& debug_map) noexcept
 {
 	inv_if(debug_map, "LogLevel",
 		[](auto& pair_str){ set_log_lvl(std::stoi(pair_str->second)); });
+#if 0
 	if (get_log_lvl() > 0)
 		CreateConsole();
+#endif
 }
 
 
@@ -153,34 +155,25 @@ static void lights_section(Section_Map& lgt_map)
 
 const Settings init_settings()
 {
-	Control::InitShared();
 
-	Control::CreateEventMain();
-	Control::UnsetEventMain();
-
-	Control::CreateEventDebug();
-	Control::UnsetEventDebug();
-
-	if (HANDLE h = Control::start_proc((get_module_dir() + "starter.exe").c_str()); h == INVALID_HANDLE_VALUE) // bcs i dont use this handle here
-	{
-		MessageBox(NULL, "Failed to start 'starter.exe'", "ERROR", MB_OK);
-
+	if (!Control::find_proc("starter.exe")) {
+		MessageBoxW(NULL, L"'starter.exe' должен быть запущен, для корректной работы приложения", L"ERROR", MB_OK);
 		try
 		{
 			Control::CloseEvents();
 		}
 		catch (const std::exception& e)
 		{ }
-
 		std::exit(1);
 	}
-	else
-	{
-		CloseHandle(h);
-	}
-	Control::SetEventMain();
-	Control::syncDebug();
+	Control::OpenShared();
 
+	Control::OpenEventMain();
+	Control::syncMain();
+	
+	Control::CreateEventDebug(); // CREATE
+	Control::UnsetEventDebug();
+	
 	Control::OpenEventDb();
 	Control::OpenMutexDebug();
 	Control::OpenMutexStore();

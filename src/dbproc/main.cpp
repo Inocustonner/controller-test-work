@@ -336,9 +336,9 @@ int main()
 	Control::OpenEventDebug();
 	Control::OpenMutexStore();
 	Control::OpenMutexDebug();
-
+#if 0
 	Control::syncDebug();
-
+#endif 
 	command_p = Control::get_command();
 
 	while (true)
