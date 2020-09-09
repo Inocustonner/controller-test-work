@@ -56,10 +56,11 @@ void Retranslator::start() {
     // std::this_thread::sleep_for(std::chrono::milliseconds(ms_timeout));
 
     // otherwise it will not work in unison
-    if (commands_uniq[size - 1] == 0x10)
+    dstp.read(bs, 1000);  // read remaining bytes
+    /*if (commands_uniq[size - 1] == 0x10)
         dstp.read(bs, 9);
     if (dstp.available())
-        dstp.read(bs);  // read remaining bytes
+        dstp.read(bs);  // read remaining bytes*/
 
     //printf("Read: ");
     //printf("%.*s", bs.size(), bs.data());

@@ -16,47 +16,47 @@ using ms = std::chrono::milliseconds;
 static auto timePointLast = Time::now();
 static ms timeSpanForStability = ms(500); // amount of time that weight shouldn't be changing to be stable
 static double lastWeight = 0;
+static int last_weight_not_in_delta_cnt = 0;
+static int last_weight_not_in_delta_max_repeat = 10;
+static double legit_weight_delta = 1000;
 
-static bytestring_view find_weight_response(const bytestring_view bsv)
+static size_t find_weight_response(const bytestring_view bsv)
 {
-	size_t pos = bsv.find_last_of('=', 0);
-	if (pos != bytestring_view::npos)
+	size_t pos = bsv.rfind('=');
+	if (pos != bytestring_view::npos && bsv.size() - pos >= 9)
 	{
 		// we have found '=' now we need to count how many number reserved bytes we have
-		// if it's >=7 and all the chars there is numbers or ' ' | '$' | '%', , then return bsv pointing on them
-		// otherwise return empty bsv
-		if (bsv.size() - pos == 9)
-		{
-			constexpr std::string_view alphabet = " 0123456789$%";
-			bool all = std::all_of(std::cbegin(bsv) + pos + 1, std::cend(bsv),
-														 [alphabet](auto c) { return alphabet.find(static_cast<char>(c)) != bytestring_view::npos; });
-
-			if (all)
-			{
-				return bytestring_view(bsv.data() + pos, bsv.size() - pos);
-			}
+		// if it's >=7 and all the chars there is numbers or ' ' | '$' | '%', , then return pos pointing on them
+		// otherwise return npos
+		constexpr std::string_view alphabet = " 0123456789$%";
+		// +8 and not +9, bcs we care only about numbers, $ or % flag is not in our interest, though i leave them in alphabet
+		for RANGE(pos + 1, pos + 7) {
+			if (alphabet.find(static_cast<char>(bsv[i])) == std::string_view::npos)
+				goto RETURN_NPOS;
 		}
+		return pos;
 	}
-	return bytestring_view{};
+	RETURN_NPOS:
+	return std::string::npos;
 }
 
-inline double extract_weight(const bytestring_view bsv)
+inline double extract_weight(size_t ans_start_pos, const bytestring_view bsv)
 {
 	double res = 0;
 	// skip first 2 syms "=(-| )", because vesysoft don't use them
 	// i in [2, 7]
 	// in vesysoft, if given "1 2 3" result = 123, so we ignore spaces too
-	for
-		RANGE(2, 8)
-		{
-			if (isdigit(bsv[i]))
-			{
-				res = res * 10 + CHAR_TO_INT(bsv[i]);
-			}
+	for	RANGE(ans_start_pos + 2, ans_start_pos + 8)	{
+		if (isdigit(bsv[i])) {
+			res = res * 10 + CHAR_TO_INT(bsv[i]); // bcs answer '33 $= 1345' is still valid we need to search circular
 		}
+	}
 	return res;
 }
 
+// Weight values may be dirty so we need to decline them
+// if prev_weight > || < curr_weight on 1000
+// decline new weight
 static void modify_resp(bytestring &bs)
 {
 	if (bs.size() >= 9)
@@ -64,11 +64,20 @@ static void modify_resp(bytestring &bs)
 		// valid weight response have the following scheme
 		// =(-| )(\d| ){6}($|%)
 		// last part, can be skipped
-		bytestring_view bsv = find_weight_response(bytestring_view{bs.data(), bs.size()});
-		if (bsv.data())
+		size_t ans_start_pos = find_weight_response(bytestring_view{bs.data(), bs.size()});
+		if (ans_start_pos != std::string::npos)
 		{
-			printf("RESPONSE VALID: %.*s\n", bsv.size(), bsv.data());
-			const double weight = extract_weight(bsv);
+			//printf("RESPONSE VALID AND STARTS FROM: %u\n", ans_start_pos);
+			const double weight = extract_weight(ans_start_pos, bytestring_view{bs.data(), bs.size()});
+			if (legit_weight_delta < weight - lastWeight) {
+				last_weight_not_in_delta_cnt++;
+				// this weight is probably invalid
+				// pass if weight is not in delta for N times
+				if (last_weight_not_in_delta_max_repeat > last_weight_not_in_delta_cnt) {
+					return;
+				}
+			}
+			last_weight_not_in_delta_cnt = 0;
 			bool stable = false;
 
 			if (lastWeight == weight)
@@ -84,7 +93,23 @@ static void modify_resp(bytestring &bs)
 				timePointLast = Time::now();
 			}
 			printf("Extracted weight: %f[%s]\n", weight, stable ? "Stable" : "Unstable");
-			printf("Fixed: %f", fix(weight, stable));
+			int fixed = static_cast<int>(fix(weight, stable));
+			printf("Fixed: %i\n", fixed);
+
+			// bcs weights use 6 bytes as with decimal in each, 2nd byte reserved for '-'
+			if (fixed < 999999) {
+				uint8_t flag = *bs.rbegin();
+				bs.erase(std::end(bs) - 8, std::end(bs));
+
+				std::vector<char> buf(8, '0');
+				std::sprintf(buf.data(), "%0.6i", fixed);
+				*buf.rbegin() = flag;
+
+				// bcs sprintf inserts '\0' 
+				if (fixed >= 0) *(buf.rbegin() + 1) = ' ';
+
+				bs.insert(std::end(bs), std::cbegin(buf), std::cend(buf));
+			}
 			lastWeight = weight;
 		}
 	}
