@@ -28,8 +28,7 @@ void Retranslator::setModificator(std::function<void(bytestring &)> modificator)
   this->modificator = modificator;
 }
 
-void Retranslator::start() {
-  int ms_timeout = 100;
+void Retranslator::start(int ms_timeout) {
   dstp.setTimeout(serial::Timeout(0, ms_timeout));
   while (true) {
     bytestring bs{};

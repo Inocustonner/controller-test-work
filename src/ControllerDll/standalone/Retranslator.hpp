@@ -16,7 +16,7 @@ public:
 
   // can be set only once
   void setModificator(std::function<void(bytestring &)> modificator);
-  void start();
+  void start(int ms_timeout = 100);
 
 private:
   serial::Serial srcp;
