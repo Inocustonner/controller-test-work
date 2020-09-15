@@ -62,12 +62,12 @@ double fix(const double p1, const bool is_stable)
 }
 
 
-bool init_fixer(const char *ini_filename)
+bool init_fixer(const inipp::Ini<char>& ini)
 {
 	Settings setts = {};
 	try
 	{
-		setts = init_settings();
+		setts = init_settings(ini);
 		init_databases(setts.db_provider, setts.dbi_a);
 	}
 	catch (const ctrl::error& e)

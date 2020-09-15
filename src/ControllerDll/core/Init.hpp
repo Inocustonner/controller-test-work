@@ -1,8 +1,9 @@
 #pragma once
+#include <inipp.h>
+
 #include <string>
 #include <array>
 #include <vector>
-
 struct DB_Auth
 {
 	std::string conn_str;
@@ -41,5 +42,5 @@ struct Settings
 	bool udentified_car_allowed = false;
 };
 
-const Settings init_settings();
+const Settings init_settings(const inipp::Ini<char>& ini);
 void init_databases(const std::string& db_provider, const std::array<DB_Auth, DB_CNT>& dbi_a);

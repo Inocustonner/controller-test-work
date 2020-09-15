@@ -8,7 +8,6 @@
 
 #include <Error.hpp>
 #include <Encode.hpp>
-#include <inipp.h>
 #include <dllInjLib/dllInj.h>	// CreateConsole
 #include <odbc/Connection.h>
 #include <odbc/Environment.h>
@@ -35,9 +34,9 @@ static std::string get_module_dir() noexcept
 
 template<typename KeyTM, typename KeyTt = KeyTM,
 		 typename ValTM, typename ValTt = ValTM>
-ValTM get(std::map<KeyTM, ValTM>& map, KeyTt&& key, ValTt&& alt)
+ValTM get(const std::map<KeyTM, ValTM>& map, KeyTt&& key, ValTt&& alt)
 {
-	if (auto it = map.find(key); it != std::end(map))
+	if (auto it = map.find(key); it != std::cend(map))
 		return it->second;
 	else
 		return alt;
@@ -46,22 +45,22 @@ ValTM get(std::map<KeyTM, ValTM>& map, KeyTt&& key, ValTt&& alt)
 
 // set if key present in map
 template<typename KeyTM, typename KeyTt = KeyTM, typename ValTM, typename ValT>
-void set_if(std::map<KeyTM, ValTM>& map, KeyTt&& key, ValT& dest)
+void set_if(const std::map<KeyTM, ValTM>& map, KeyTt&& key, ValT& dest)
 {
-		if (auto it = map.find(key); it != std::end(map))
+		if (auto it = map.find(key); it != std::cend(map))
 			dest = it->second;
 }
 
 // invokes if key present in map
 template<typename KeyTM, typename KeyTt = KeyTM, typename ValTM, typename FuncT>
-void inv_if(std::map<KeyTM, ValTM>& map, KeyTt&& key, FuncT func)
+void inv_if(const std::map<KeyTM, ValTM>& map, KeyTt&& key, FuncT func)
 {
-		if (auto it = map.find(key); it != std::end(map))
+		if (auto it = map.find(key); it != std::cend(map))
 			func(it);
 }
 
 
-static void debug_section(Section_Map& debug_map) noexcept
+static void debug_section(const Section_Map& debug_map) noexcept
 {
 	inv_if(debug_map, "LogLevel",
 		[](auto& pair_str){ set_log_lvl(std::stoi(pair_str->second)); });
@@ -72,7 +71,7 @@ static void debug_section(Section_Map& debug_map) noexcept
 }
 
 
-static void default_section(Section_Map& default_map, Settings& setts) noexcept
+static void default_section(const Section_Map& default_map, Settings& setts) noexcept
 {
 	inv_if(default_map, "reset_thr",
 		[](auto& pair_str){ set_reset_thr(std::stod(pair_str->second)); });
@@ -115,7 +114,7 @@ static void default_section(Section_Map& default_map, Settings& setts) noexcept
 }
 
 
-static void com_section(Section_Map& com_map, Settings& setts)
+static void com_section(const Section_Map& com_map, Settings& setts)
 {
 	for (auto it = std::cbegin(com_map); it != std::cend(com_map); ++it)
 	{
@@ -140,7 +139,7 @@ static void com_section(Section_Map& com_map, Settings& setts)
 }
 
 
-static void lights_section(Section_Map& lgt_map)
+static void lights_section(const Section_Map& lgt_map)
 {
 	inv_if(lgt_map, "ConsoleWait",
 		[](auto& pair_str){ set_light_wait(pair_str->second); });
@@ -153,7 +152,7 @@ static void lights_section(Section_Map& lgt_map)
 }
 
 
-const Settings init_settings()
+const Settings init_settings(const inipp::Ini<char>& ini)
 {
 
 	if (!Control::find_proc("starter.exe")) {
@@ -178,33 +177,33 @@ const Settings init_settings()
 	Control::OpenMutexDebug();
 	Control::OpenMutexStore();
 
-	constexpr auto ini_name = "ini.ini";
-	const std::string path_to_ini = get_module_dir() + ini_name;
-
-	// constexpr std::array ini_sections = { "DEFAULT", "COM", "DEBUG" };
 	Settings setts = {};
-	inipp::Ini<char> ini;
-	FILE* fp = fopen(path_to_ini.c_str(), "rb");
-	if (!fp)
-	{
-		dprintf(msg<12>());
-		throw ctrl::error("Failed to open file %s\n", path_to_ini.c_str());
-	}
+	// constexpr auto ini_name = "ini.ini";
+	// const std::string path_to_ini = get_module_dir() + ini_name;
 
-	std::string ss;
-	try
-	{
-		fdecode(ss, fp);
-	}
-	catch (std::exception& e)
-	{
-		fclose(fp);
-		dprintf(msg<9>());
-		throw ctrl::error("Failed to decode: \"%s\"", e.what());
-	}
-	fclose(fp);
+	// // constexpr std::array ini_sections = { "DEFAULT", "COM", "DEBUG" };
+	// inipp::Ini<char> ini;
+	// FILE* fp = fopen(path_to_ini.c_str(), "rb");
+	// if (!fp)
+	// {
+	// 	dprintf(msg<12>());
+	// 	throw ctrl::error("Failed to open file %s\n", path_to_ini.c_str());
+	// }
 
-	ini.parse(std::stringstream(ss));
+	// std::string ss;
+	// try
+	// {
+	// 	fdecode(ss, fp);
+	// }
+	// catch (std::exception& e)
+	// {
+	// 	fclose(fp);
+	// 	dprintf(msg<9>());
+	// 	throw ctrl::error("Failed to decode: \"%s\"", e.what());
+	// }
+	// fclose(fp);
+
+	// ini.parse(std::stringstream(ss));
 
 	if (ini.sections.contains("DEBUG"))
 	{
@@ -215,7 +214,7 @@ const Settings init_settings()
 	auto prev_log_level = get_log_lvl();
 	set_log_lvl(2);
 
-	dprintf("ini path:\n\t%s\n", path_to_ini.c_str());
+	// dprintf("ini path:\n\t%s\n", path_to_ini.c_str());
 
 	if (ini.sections.contains("DEFAULT"))
 	{

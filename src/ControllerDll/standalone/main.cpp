@@ -1,12 +1,17 @@
 #include "Retranslator.hpp"
 #include "macro.hpp"
 #include "../core/fixer.h"
+#include "../core/Output.hpp"
 #include <Control.hpp>
+#include <Encode.hpp>
+#include <Error.hpp>
 
 #include <iostream>
 #include <algorithm>
 #include <string_view>
 #include <chrono>
+
+#include <atomic>
 
 #include <Windows.h>
 
@@ -23,7 +28,7 @@ static double legit_weight_delta = 1000;
 static size_t find_weight_response(const bytestring_view bsv)
 {
 	size_t pos = bsv.rfind('=');
-	if (pos != bytestring_view::npos && bsv.size() - pos >= 9)
+	if (pos != bytestring_view::npos && bsv.size() - pos >= 9 - 1) // flag may be absent
 	{
 		// we have found '=' now we need to count how many number reserved bytes we have
 		// if it's >=7 and all the chars there is numbers or ' ' | '$' | '%', , then return pos pointing on them
@@ -115,6 +120,18 @@ static void modify_resp(bytestring &bs)
 	}
 }
 
+bool create_starter_proc(const std::string& current_dir) {
+		// init corep
+	HANDLE starter_h = Control::start_proc((current_dir + "starter.exe" + " controller_standalone.exe ").c_str());
+	if (starter_h == INVALID_HANDLE_VALUE) // bcs i dont use this handle here
+	{
+		MessageBoxW(NULL, L"Неудалось запустить 'starter.exe'", L"ERROR", MB_OK);
+		return false;
+	}
+	CloseHandle(starter_h);
+	return true;
+}
+
 int main()
 {
 	// find current_dir
@@ -123,20 +140,48 @@ int main()
 	auto current_dir = std::string(path_buf);
 	current_dir.erase(std::begin(current_dir) + current_dir.find_last_of('\\') + 1, std::end(current_dir));
 
-	// init corep
-	HANDLE starter_h = Control::start_proc((current_dir + "starter.exe" + " controller_standalone.exe ").c_str());
-	if (starter_h == INVALID_HANDLE_VALUE) // bcs i dont use this handle here
+	// load ini file
+	constexpr auto ini_name = "ini.ini";
+	const std::string path_to_ini = current_dir + ini_name;
+
+	inipp::Ini<char> ini;
+	FILE* fp = fopen(path_to_ini.c_str(), "rb");
+	if (!fp) {
+		dprintf(msg<12>());
+		throw ctrl::error("Failed to open file %s\n", path_to_ini.c_str());
+	}
+
+	std::string ss;
+	try
 	{
-		MessageBoxW(NULL, L"Неудалось запустить 'starter.exe'", L"ERROR", MB_OK);
+		fdecode(ss, fp);
+	}
+	catch (std::exception& e)
+	{
+		fclose(fp);
+		dprintf(msg<9>());
+		printf("Failed to decode: \"%s\"", e.what());
+	}
+	fclose(fp);
+
+	ini.parse(std::stringstream(ss));
+	if (!create_starter_proc(current_dir)) {
 		std::exit(1);
 	}
-	CloseHandle(starter_h);
 
-	init_fixer("ini.ini");
+	init_fixer(ini);
 
 	// start retranslator
-	auto r = Retranslator("COM2", "COM1");
-	r.setModificator(modify_resp);
-	r.start();
+	try {
+		const std::string src_port = ini.sections["DEFAULT"]["COM-end-for-retranslator"];
+		const std::string dst_port = ini.sections["DEFAULT"]["COM-for-weights"];
+		const std::string brdige = ini.sections["DEFAULT"]["COM-end-for-bridge"];
+		auto r = Retranslator(src_port, dst_port, brdige);
+		r.setModificator(modify_resp);
+		r.start(50);
+	}
+	catch (const std::exception& e) {
+		printf("%s\n", e.what());
+	}
 	return 0;
 }
