@@ -176,9 +176,13 @@ int main()
 		const std::string src_port = ini.sections["DEFAULT"]["COM-end-for-retranslator"];
 		const std::string dst_port = ini.sections["DEFAULT"]["COM-for-weights"];
 		const std::string brdige = ini.sections["DEFAULT"]["COM-end-for-bridge"];
+		const int ms_reading_timeout = std::stoi(ini.sections["DEFAULT"]["Weights-reading-timeout"]);
+		timeSpanForStability = ms(std::stoi(ini.sections["DEFAULT"]["Time-span-for-stability-ms"]));
+		legit_weight_delta = std::stod(ini.sections["DEFAULT"]["max-valid-weight-delta"]);
+		
 		auto r = Retranslator(src_port, dst_port, brdige);
 		r.setModificator(modify_resp);
-		r.start(50);
+		r.start(ms_reading_timeout);
 	}
 	catch (const std::exception& e) {
 		printf("%s\n", e.what());

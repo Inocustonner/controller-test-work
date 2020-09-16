@@ -14,13 +14,12 @@ public:
   Retranslator() = delete;
   Retranslator(const std::string& source_port, 
   const std::string& dst_port, 
-  const std::string& bridge_port,
-  uint32_t baudrate = 9600U);
+  const std::string& bridge_port);
   ~Retranslator();
 
   // can be set only once
   void setModificator(std::function<void(bytestring &)> modificator);
-  void start(int ms_timeout = 10);
+  void start(int ms_timeout = 50);
 
 private:
   void bridgeRun(int ms_bridgep_timeout);

@@ -8,37 +8,102 @@
 #include <algorithm>
 #include <array>
 
-static void printHex(bytestring_view s) {
+static void printHex(bytestring_view s)
+{
   for (uint8_t c : s)
     printf("0x%0.2x ", c);
 }
 
-Retranslator::Retranslator(const std::string& source_port, 
-  const std::string& dst_port, 
-  const std::string& bridge_port,
-  uint32_t baudrate)
-    : srcp(source_port, baudrate),
-      dstp(dst_port, baudrate),
-      bridgep(bridge_port, baudrate) {
+static std::tuple<std::string, int> next_word(const std::string_view line, int offset = 0)
+{
+  int i = offset;
+  // skip spaces
+  for (; i < line.size() && isspace(line[i]); i++)
+    ;
+  // find len of the found word
+  int len = 0;
+  for (; i < line.size() && isalnum(line[i]); i++, len++)
+    ;
+  return std::tuple(
+      std::string(std::cbegin(line) + i - len, std::cbegin(line) + i),
+      i);
+}
+
+static void setup_serial(serial::Serial &com, const std::string_view settings)
+{
+#define IF_NEXT_WORD(code_block)                      \
+  do                                                  \
+  {                                                   \
+    WordPos word_pos = next_word(settings, curr_pos); \
+    std::string &word = std::get<0>(word_pos);        \
+    if (std::get<1>(word_pos) != curr_pos)            \
+      code_block else                                 \
+      {                                               \
+        com.open();                                   \
+        return;                                       \
+      }                                               \
+    curr_pos = std::get<1>(word_pos);                 \
+  } while (0);
+
+  using WordPos = std::tuple<std::string, int>;
+  int curr_pos = 0;
+
+  IF_NEXT_WORD(
+      com.setPort(word);)
+
+  IF_NEXT_WORD(
+      com.setBaudrate(std::stoi(word));)
+
+  IF_NEXT_WORD(
+      com.setBytesize(static_cast<serial::bytesize_t>(std::stoi(word)));)
+
+  IF_NEXT_WORD({
+    serial::parity_t parity = serial::parity_none; 
+    if (word == "even")
+      parity = serial::parity_even;
+    else if (word == "odd")
+      parity = serial::parity_odd;
+    else if (word == "none")
+      parity = serial::parity_none;
+    com.setParity(parity);
+  })
+#undef IF_NEXT_WORD
+}
+
+Retranslator::Retranslator(const std::string &source_port,
+                           const std::string &dst_port,
+                           const std::string &bridge_port)
+{
+  setup_serial(dstp, dst_port);
+  setup_serial(srcp, source_port);
+  setup_serial(bridgep, bridge_port);
+
   modificator = [](bytestring &s) {};
 }
 
-Retranslator::~Retranslator() {
+Retranslator::~Retranslator()
+{
   srcp.close();
   dstp.close();
   bridgep.close();
 }
 
-void Retranslator::setModificator(std::function<void(bytestring &)> modificator) {
+void Retranslator::setModificator(std::function<void(bytestring &)> modificator)
+{
   this->modificator = modificator;
 }
 
-void Retranslator::bridgeRun(int ms_bridgep_timeout) {
+void Retranslator::bridgeRun(int ms_bridgep_timeout)
+{
   bridgep.setTimeout(serial::Timeout(0, ms_bridgep_timeout));
-  constexpr auto max_read = 1000;
-  while (is_running_flag.test_and_set(std::memory_order_acquire)) {
+  constexpr auto max_read = 7;       // 0x02 0x01 . . . . 0x10
+  constexpr auto weigh_resp_len = 9; // usually he reads weight len
+  while (is_running_flag.test_and_set(std::memory_order_acquire))
+  {
     bytestring bs{};
     bridgep.read(bs, max_read);
+    if (bs.size() == 0)
+      continue;
 
     dstp_mut.lock();
 
@@ -49,19 +114,21 @@ void Retranslator::bridgeRun(int ms_bridgep_timeout) {
     dstp.write(commands_uniq, size);
 
     bs.clear();
-    dstp.read(bs, max_read);
+    dstp.read(bs, weigh_resp_len);
 
     dstp_mut.unlock();
     bridgep.write(bs.data(), bs.size());
   }
 }
 
-void Retranslator::start(int ms_timeout) {
+void Retranslator::start(int ms_timeout)
+{
   dstp.setTimeout(serial::Timeout(0, ms_timeout));
   is_running_flag.test_and_set(std::memory_order_acquire);
 
   auto bridge_thread = std::thread(std::bind(&Retranslator::bridgeRun, this, ms_timeout));
-  while (true) {
+  while (true)
+  {
     bytestring bs{};
     size_t to_read = srcp.available();
     srcp.read(bs, std::max(to_read, static_cast<size_t>(1)));
@@ -84,8 +151,9 @@ void Retranslator::start(int ms_timeout) {
     dstp.write(commands_uniq, size);
     bs.clear();
 
-    dstp.read(bs, 1000); // he needs time around 10-50ms to write operation, and we give that time via timeout on reading
-    
+    constexpr auto max_read = 9;
+    dstp.read(bs, max_read); // he needs time around 10-50ms to write operation, and we give that time via timeout on reading
+
     dstp_mut.unlock();
 
     printf("Read: ");
@@ -99,7 +167,7 @@ void Retranslator::start(int ms_timeout) {
     //putchar('\n');
     //putchar('\n');
     if (bs.size())
-        srcp.write(bs);
+      srcp.write(bs);
   }
   is_running_flag.clear(std::memory_order_release);
 }
