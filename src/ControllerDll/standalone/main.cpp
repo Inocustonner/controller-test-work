@@ -97,10 +97,10 @@ static void modify_resp(bytestring &bs)
 			{
 				timePointLast = Time::now();
 			}
-			printf("Extracted weight: %f[%s]\n", weight, stable ? "Stable" : "Unstable");
-			int fixed = static_cast<int>(fix(weight, stable));
-			printf("Fixed: %i\n", fixed);
 
+			int fixed = static_cast<int>(fix(weight, stable));
+			printf("Extracted weight: %f[%s]\n", weight, stable ? "Stable" : "Unstable");
+			printf("Fixed: %i\n", fixed);
 			// bcs weights use 6 bytes as with decimal in each, 2nd byte reserved for '-'
 			if (fixed < 999999) {
 				uint8_t flag = *bs.rbegin();
@@ -134,6 +134,11 @@ bool create_starter_proc(const std::string& current_dir) {
 
 int main()
 {
+#ifndef _DEBUG
+	constexpr auto iobuffer_size = 1024 * 16;
+	char iobuffer[iobuffer_size] = {};
+	std::setvbuf(stdout, iobuffer, _IOFBF, iobuffer_size);
+#endif
 	// find current_dir
 	char path_buf[MAX_PATH + 1] = {};
 	GetModuleFileNameA(NULL, reinterpret_cast<char*>(path_buf), std::size(path_buf) - 1);	
