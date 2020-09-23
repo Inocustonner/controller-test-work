@@ -1,0 +1,10 @@
+SECTIONS
+	.data_shared READ WRITE SHARED
+
+EXPORTS
+	DllGetClassObject   PRIVATE
+	DllCanUnloadNow	    PRIVATE
+	DllRegisterServer   PRIVATE
+	DllUnregisterServer PRIVATE
+	setWeight
+	setWeightFixed

@@ -59,7 +59,10 @@ set_target_properties(controller_dll
 add_executable(controller_standalone standalone/main.cpp
 									 standalone/Retranslator.cpp
 									 standalone/Commands.cpp)
-target_link_libraries(controller_standalone controller_core)
+
+target_link_libraries(controller_standalone controller_core 
+																						retranslatorAX)
+
 set_target_properties(controller_standalone
     PROPERTIES
     ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_ARCHIVE_OUTPUT_DIRECTORY}/controller_standalone"

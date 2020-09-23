@@ -71,12 +71,10 @@ static void setup_serial(serial::Serial &com, const std::string_view settings)
 }
 
 Retranslator::Retranslator(const std::string &source_port,
-                           const std::string &dst_port,
-                           const std::string &bridge_port)
+                           const std::string &dst_port)
 {
   setup_serial(dstp, dst_port);
   setup_serial(srcp, source_port);
-  setup_serial(bridgep, bridge_port);
 
   modificator = [](bytestring &s) {};
 }
@@ -85,7 +83,6 @@ Retranslator::~Retranslator()
 {
   srcp.close();
   dstp.close();
-  bridgep.close();
 }
 
 void Retranslator::setModificator(std::function<void(bytestring &)> modificator)
@@ -93,41 +90,11 @@ void Retranslator::setModificator(std::function<void(bytestring &)> modificator)
   this->modificator = modificator;
 }
 
-void Retranslator::bridgeRun(int ms_bridgep_timeout)
-{
-  bridgep.setTimeout(serial::Timeout(0, ms_bridgep_timeout));
-  constexpr auto max_read = 7;       // 0x02 0x01 . . . . 0x10
-  constexpr auto weigh_resp_len = 9; // usually he reads weight len
-  while (is_running_flag.test_and_set(std::memory_order_acquire))
-  {
-    bytestring bs{};
-    bridgep.read(bs, max_read);
-    if (bs.size() == 0)
-      continue;
-
-    dstp_mut.lock();
-
-    constexpr int commands_max_size = 50;
-    uint8_t commands_uniq[50] = {};
-    int size = parse_commands_unique(bs, commands_uniq, commands_max_size);
-
-    dstp.write(commands_uniq, size);
-
-    bs.clear();
-    dstp.read(bs, weigh_resp_len);
-
-    dstp_mut.unlock();
-    bridgep.write(bs.data(), bs.size());
-  }
-}
-
 void Retranslator::start(int ms_timeout)
 {
   dstp.setTimeout(serial::Timeout(0, ms_timeout));
-  is_running_flag.test_and_set(std::memory_order_acquire);
 
-  auto bridge_thread = std::thread(std::bind(&Retranslator::bridgeRun, this, ms_timeout));
-  while (true)
+  while (run_flag)
   {
     bytestring bs{};
     size_t to_read = srcp.available();
@@ -169,5 +136,4 @@ void Retranslator::start(int ms_timeout)
     if (bs.size())
       srcp.write(bs);
   }
-  is_running_flag.clear(std::memory_order_release);
 }

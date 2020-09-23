@@ -74,13 +74,13 @@ static void debug_section(const Section_Map& debug_map) noexcept
 static void default_section(const Section_Map& default_map, Settings& setts) noexcept
 {
 	inv_if(default_map, "reset_thr",
-		[](auto& pair_str){ set_reset_thr(std::stod(pair_str->second)); });
+		[](auto& pair_str){ set_reset_thr(std::stoi(pair_str->second)); });
 	
 	inv_if(default_map, "store_diff",
-		[](auto& pair_str){ set_store_diff(std::stod(pair_str->second)); });
+		[](auto& pair_str){ set_store_diff(std::stoi(pair_str->second)); });
 
 	inv_if(default_map, "min_weight",
-		[](auto& pair_str) { set_default_min_weight(std::stod(pair_str->second)); });
+		[](auto& pair_str) { set_default_min_weight(std::stoi(pair_str->second)); });
 
 	inv_if(default_map, "unidentified-car-allowed",
 		[&setts](auto& pair_str) { if (pair_str->second == "on") setts.udentified_car_allowed = true; else setts.udentified_car_allowed = false; });

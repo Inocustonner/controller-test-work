@@ -138,21 +138,21 @@ void com_reader(std::vector<Port_Info> pi_v, const std::string suffix, bool uden
 			{
 				le = LightsEnum::Acc;
 				massert(data_p->type == DataType::Int);
-				state.min_weight = static_cast<double>(*reinterpret_cast<int*>(data_p->body()));
+				state.min_weight = static_cast<comptype>(*reinterpret_cast<int*>(data_p->body()));
 
 				data_p = Control::next_data(data_p);
 				massert(data_p->type == DataType::Int);
-				double tmp_corr = static_cast<double>(*reinterpret_cast<int*>(data_p->body()));
+				auto tmp_corr = static_cast<double>(*reinterpret_cast<int*>(data_p->body()));
 
 				if (-100 < tmp_corr && tmp_corr < 100)
 				{
-					tmp_corr = 1.0 + tmp_corr / 100;
-					state.corr = [mw = state.min_weight, corr_k = tmp_corr](double inp) -> double
+					tmp_corr = 1 + tmp_corr / 100;
+					state.corr = [mw = state.min_weight, corr_k = tmp_corr](comptype inp) ->comptype
 					{ return (inp - mw) * corr_k; };
 				}
 				else
 				{
-					state.corr = [corr = tmp_corr](double inp) -> double
+					state.corr = [corr = tmp_corr](comptype inp) -> comptype
 					{ return inp + corr; };
 				}
 
@@ -164,7 +164,7 @@ void com_reader(std::vector<Port_Info> pi_v, const std::string suffix, bool uden
 			{
 				state.id = "";
 				gn = "";
-				state.corr = [](double inp) -> double { return inp; };
+				state.corr = [](comptype inp) -> comptype { return inp; };
 				state.min_weight = default_min_weight;
 			}
 			else// invalid car

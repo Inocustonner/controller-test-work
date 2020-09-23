@@ -3,4 +3,4 @@
 
 bool init_fixer(const inipp::Ini<char>& ini);
 
-double fix(double value, bool is_stable);
+int fix(int value, bool is_stable);

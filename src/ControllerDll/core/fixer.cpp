@@ -10,10 +10,12 @@
 #include <thread>
 #include <cstdlib>
 
+#include "fixer.h"
+
 inline
-double phase1(const double p1, const bool is_stable)
+comptype phase1(const comptype p1, const bool is_stable)
 {
-	double corr_weight = state.corr(p1);
+	comptype corr_weight = state.corr(p1);
 	if (is_stable)
 	{
 		if (std::abs(p1 - state.p0s) > store_diff && is_stable)
@@ -28,7 +30,7 @@ double phase1(const double p1, const bool is_stable)
 
 
 inline
-void phase0(const double p1)
+void phase0(const comptype p1)
 {
 	if (state.p0 > p1 
 		&& state.p0 > reset_thr 
@@ -40,9 +42,9 @@ void phase0(const double p1)
 }
 
 
-double fix(const double p1, const bool is_stable)
+comptype fix(const comptype p1, const bool is_stable)
 {
-	double ret_value = p1;
+	comptype ret_value = p1;
 	if (authorized())
 	{
 		if (p1 < state.min_weight)

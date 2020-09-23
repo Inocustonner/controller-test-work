@@ -8,6 +8,7 @@ set(ProjLibDir "${CMAKE_SOURCE_DIR}/lib/${CMAKE_BUILD_TYPE}")
 set(LnkLibDirs "${BoostDateTime};${ProjLibDir}")
 
 add_subdirectory(Control)
+add_subdirectory(RetranslatorActiveXLib)
 add_subdirectory(ControllerDll)
 add_subdirectory(mmsg)
 add_subdirectory(dbproc)

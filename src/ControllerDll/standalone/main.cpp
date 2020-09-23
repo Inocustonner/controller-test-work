@@ -15,6 +15,11 @@
 
 #include <Windows.h>
 
+#define IMPORT_DLL extern "C" __declspec(dllimport)
+
+IMPORT_DLL void __stdcall setWeight(long weight);
+IMPORT_DLL void __stdcall setWeightFixed(long weight);
+
 using Time = std::chrono::high_resolution_clock;
 using ms = std::chrono::milliseconds;
 
@@ -24,6 +29,23 @@ static double lastWeight = 0;
 static int last_weight_not_in_delta_cnt = 0;
 static int last_weight_not_in_delta_max_repeat = 10;
 static double legit_weight_delta = 1000;
+
+static BOOL can_exit = FALSE;
+static Retranslator *g_retranslator = nullptr;
+
+BOOL WINAPI CtrlHandler(DWORD signal) {
+	if (signal == CTRL_C_EVENT) {
+		printf("Closing retranslator...n");
+		g_retranslator->run_flag = false;
+		while (!can_exit) {
+			std::this_thread::sleep_for(std::chrono::milliseconds(50));
+		}
+		return TRUE;
+	}
+	else
+		return FALSE;
+}
+
 
 static size_t find_weight_response(const bytestring_view bsv)
 {
@@ -45,9 +67,9 @@ static size_t find_weight_response(const bytestring_view bsv)
 	return std::string::npos;
 }
 
-inline double extract_weight(size_t ans_start_pos, const bytestring_view bsv)
+inline int extract_weight(size_t ans_start_pos, const bytestring_view bsv)
 {
-	double res = 0;
+	int res = 0;
 	// skip first 2 syms "=(-| )", because vesysoft don't use them
 	// i in [2, 7]
 	// in vesysoft, if given "1 2 3" result = 123, so we ignore spaces too
@@ -73,7 +95,7 @@ static void modify_resp(bytestring &bs)
 		if (ans_start_pos != std::string::npos)
 		{
 			//printf("RESPONSE VALID AND STARTS FROM: %u\n", ans_start_pos);
-			const double weight = extract_weight(ans_start_pos, bytestring_view{bs.data(), bs.size()});
+			const int weight = extract_weight(ans_start_pos, bytestring_view{bs.data(), bs.size()});
 			if (legit_weight_delta < weight - lastWeight) {
 				last_weight_not_in_delta_cnt++;
 				// this weight is probably invalid
@@ -98,9 +120,13 @@ static void modify_resp(bytestring &bs)
 				timePointLast = Time::now();
 			}
 
-			int fixed = static_cast<int>(fix(weight, stable));
-			printf("Extracted weight: %f[%s]\n", weight, stable ? "Stable" : "Unstable");
+			int fixed = fix(weight, stable);
+			printf("Extracted weight: %i[%s]\n", weight, stable ? "Stable" : "Unstable");
 			printf("Fixed: %i\n", fixed);
+
+			setWeight(weight);
+			setWeightFixed(fixed);
+
 			// bcs weights use 6 bytes as with decimal in each, 2nd byte reserved for '-'
 			if (fixed < 999999) {
 				uint8_t flag = *bs.rbegin();
@@ -174,23 +200,30 @@ int main()
 		std::exit(1);
 	}
 
+	if (!SetConsoleCtrlHandler(CtrlHandler, TRUE)) {
+		printf("Unnable to set console handler\n");
+		std::this_thread::sleep_for(std::chrono::seconds(1));
+		std::exit(1);
+	}
+
 	init_fixer(ini);
 
 	// start retranslator
 	try {
 		const std::string src_port = ini.sections["DEFAULT"]["COM-end-for-retranslator"];
 		const std::string dst_port = ini.sections["DEFAULT"]["COM-for-weights"];
-		const std::string brdige = ini.sections["DEFAULT"]["COM-end-for-bridge"];
 		const int ms_reading_timeout = std::stoi(ini.sections["DEFAULT"]["Weights-reading-timeout"]);
 		timeSpanForStability = ms(std::stoi(ini.sections["DEFAULT"]["Time-span-for-stability-ms"]));
 		legit_weight_delta = std::stod(ini.sections["DEFAULT"]["max-valid-weight-delta"]);
 		
-		auto r = Retranslator(src_port, dst_port, brdige);
+		auto r = Retranslator(src_port, dst_port);
+		g_retranslator = &r;
 		r.setModificator(modify_resp);
 		r.start(ms_reading_timeout);
 	}
 	catch (const std::exception& e) {
 		printf("%s\n", e.what());
 	}
+	can_exit = TRUE;
 	return 0;
 }

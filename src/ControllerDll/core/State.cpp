@@ -2,13 +2,13 @@
 
 static std::atomic<bool> auth_flag = false;
 
-static double __reset_thr = 15000.0;
-static double __store_diff = 200.0;
-static double __default_min_weight = 10000.0;
+static comptype __reset_thr = 15000;
+static comptype __store_diff = 200;
+static comptype __default_min_weight = 10000;
 
-const double& reset_thr = __reset_thr;			// externed
-const double& store_diff = __store_diff;		// externed
-const double& default_min_weight = __default_min_weight;
+const comptype& reset_thr = __reset_thr;			// externed
+const comptype& store_diff = __store_diff;		// externed
+const comptype& default_min_weight = __default_min_weight;
 
 State state{};									// externed
 

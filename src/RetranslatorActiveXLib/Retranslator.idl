@@ -1,0 +1,37 @@
+import "unknwn.idl";
+
+[
+  uuid(F5D56A47-4C01-4C07-A033-3C8B87787F71),
+  helpstring("Library with access to retranslator"),
+  control
+]
+library RetranslatorLib 
+{
+  //importlib("stdole32.tlb");
+  importlib("stdole2.tlb");
+
+  [
+    object,
+    uuid(097344BD-7C6B-4F8C-9787-78C85E9EAC8B),
+    version(1.0),
+    helpstring("Interface for Retranslator class"),
+    oleautomation,
+    dual
+  ]
+  interface IRetranslator : IDispatch 
+  {
+    [id(10), propget] HRESULT getWeight([out, retval] long *res);
+    [id(12), propget] HRESULT getWeightFixed([out, retval] long *res);
+  }
+
+  [
+    uuid(6425EC19-B96A-4648-B24A-52997A34911E),
+    helpstring("Retranslator class"),
+    control
+  ]
+  coclass RetranslatorAX
+  {
+    [default] interface IRetranslator;
+    interface IDispatch;
+  }
+}
