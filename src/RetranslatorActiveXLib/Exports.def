@@ -8,3 +8,6 @@ EXPORTS
 	DllUnregisterServer PRIVATE
 	setWeight
 	setWeightFixed
+	setStatus
+	setEventHook
+	initDll

@@ -9,6 +9,7 @@ add_library(retranslatorAX SHARED AXEntry.cpp
                           RetranslatorAX.cpp
                           Retranslator.rc
                           Exports.def
+                          Hook.cpp
                           )
                           
 target_link_libraries(retranslatorAX PUBLIC RetranslatorIDL)
@@ -18,7 +19,10 @@ set_target_properties(retranslatorAX
    LIBRARY_OUTPUT_DIRECTORY "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/retranslatorAX"
    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/retranslatorAX"
    )
-target_include_directories(retranslatorAX INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/include)
+
+target_include_directories(retranslatorAX INTERFACE
+   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/>
+)
 
 #message(${BUILD_TYPE})
 add_custom_command(TARGET retranslatorAX 

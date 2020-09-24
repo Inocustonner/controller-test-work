@@ -20,8 +20,14 @@ library RetranslatorLib
   ]
   interface IRetranslator : IDispatch 
   {
-    [id(10), propget] HRESULT getWeight([out, retval] long *res);
-    [id(12), propget] HRESULT getWeightFixed([out, retval] long *res);
+    [id(10), propget] HRESULT weight([out, retval] long *res);
+    [id(12), propget] HRESULT weightFixed([out, retval] long *res);
+    [id(13), propget] HRESULT status([out, retval] long *res);
+    [id(14), propget] HRESULT minimalWeight([out, retval] long *res);
+    [id(15), propget] HRESULT corr([out, retval] long *res);
+
+    [id(14), propput] HRESULT minimalWeight([in] long val);
+    [id(15), propput] HRESULT corr([in] long corr);
   }
 
   [

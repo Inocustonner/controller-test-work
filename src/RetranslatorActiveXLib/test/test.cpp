@@ -9,7 +9,7 @@ int main() {
                                 reinterpret_cast<void **>(&ir));
   if (SUCCEEDED(hr)) {
     long res;
-    ir->get_getWeight(&res);
+    ir->get_weight(&res);
     ir->Release();
   }
   CoUninitialize();

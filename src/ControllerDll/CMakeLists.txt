@@ -15,7 +15,7 @@ add_library(controller_core STATIC
 	core/State.cpp 
 	core/Databases.cpp 
 	core/Init.cpp 
-	core/Reader.cpp 
+	# core/Reader.cpp 
 	core/SerialPool.cpp
 	core/Lights.cpp
 	core/mmsg.cpp

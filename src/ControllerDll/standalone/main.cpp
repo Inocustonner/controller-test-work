@@ -15,11 +15,12 @@
 
 #include <Windows.h>
 
-#define IMPORT_DLL extern "C" __declspec(dllimport)
+#include <HookTypes.hpp>
 
-IMPORT_DLL void __stdcall setWeight(long weight);
-IMPORT_DLL void __stdcall setWeightFixed(long weight);
-
+extern "C"{
+void initDll();
+void setEventHook(EventType event, SetHook *onSet);
+}
 using Time = std::chrono::high_resolution_clock;
 using ms = std::chrono::milliseconds;
 
@@ -124,9 +125,6 @@ static void modify_resp(bytestring &bs)
 			printf("Extracted weight: %i[%s]\n", weight, stable ? "Stable" : "Unstable");
 			printf("Fixed: %i\n", fixed);
 
-			setWeight(weight);
-			setWeightFixed(fixed);
-
 			// bcs weights use 6 bytes as with decimal in each, 2nd byte reserved for '-'
 			if (fixed < 999999) {
 				uint8_t flag = *bs.rbegin();
@@ -158,8 +156,14 @@ bool create_starter_proc(const std::string& current_dir) {
 	return true;
 }
 
+void corrSet(long new_corr) {
+	printf("%d - NEW CORR\n", new_corr);
+}
+
 int main()
 {
+	initDll();
+	setEventHook(SetCorr, corrSet);
 #ifndef _DEBUG
 	constexpr auto iobuffer_size = 1024 * 16;
 	char iobuffer[iobuffer_size] = {};

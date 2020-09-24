@@ -86,8 +86,8 @@ void dprintf(const char *fmt, ...)
 	const char* str = make_buf(fmt, vl);
 	if (log_lvl > 0)
 		fprintf(stderr, "%s", str);
-	if (log_lvl < 2)
-		dblog(-1, str);
+	//if (log_lvl < 2)
+	//	dblog(-1, str);
 
 	va_end(vl);
 }
@@ -111,10 +111,10 @@ void dprintf(const msg_t msg)
 			mMsgBox(L"Warning", std::get<3>(msg), msg_duration);
 		}
 
-		if (log_lvl < 2) // avoid multiple writing to db
-		{
-			dblog(std::get<0>(msg), std::get<2>(msg));
-		}
+		//if (log_lvl < 2) // avoid multiple writing to db
+		//{
+		//	dblog(std::get<0>(msg), std::get<2>(msg));
+		//}
 	}
 	prev_code = std::get<0>(msg);
 	// msgbox

@@ -1,5 +1,6 @@
 #include "RetranslatorAX.hpp"
 #include <Retranslator_i.c>
+#include "Hook.hpp"
 
 #include <comutil.h>
 #include <windows.h>
@@ -8,11 +9,17 @@
 #pragma comment(lib, "comsupp.lib")
 #pragma comment(lib, "comsuppwd.lib")
 
+#define InterlockedRead(var) InterlockedExchangeAdd(&(var), 0)
+#define EXTERN_SHARED extern "C" volatile
+
 extern HMODULE g_module;
 extern std::atomic_long g_objsInUse;
 
-extern "C" volatile long weightRaw;
-extern "C" volatile long weightFixed;
+EXTERN_SHARED long g_weightRaw;
+EXTERN_SHARED long g_weightFixed;
+EXTERN_SHARED long g_status;
+EXTERN_SHARED long g_minWeight;
+EXTERN_SHARED long g_corr;
 
 RetranslatorAX::RetranslatorAX()
     : m_refCount(0),
@@ -44,24 +51,51 @@ RetranslatorAX::~RetranslatorAX()
   g_objsInUse--;
 }
 
-HRESULT __stdcall RetranslatorAX::get_getWeight(long *res)
+HRESULT __stdcall RetranslatorAX::get_weight(long *res)
 {
-  *res = InterlockedExchangeAdd(&weightRaw, 0);
+  *res = InterlockedRead(g_weightRaw);
   return S_OK;
 }
 
-HRESULT __stdcall RetranslatorAX::get_getWeightFixed(long *res)
+HRESULT __stdcall RetranslatorAX::get_weightFixed(long *res)
 {
-  *res = InterlockedExchangeAdd(&weightFixed, 0);
+  *res = InterlockedRead(g_weightFixed);
+  return S_OK;
+}
+
+HRESULT __stdcall RetranslatorAX::get_status(long *res) {
+  *res = InterlockedRead(g_status);
+  return S_OK;
+}
+
+HRESULT __stdcall RetranslatorAX::get_minimalWeight(long *res) {
+  *res = InterlockedRead(g_minWeight);
+  return S_OK;
+}
+
+HRESULT __stdcall RetranslatorAX::get_corr(long *res) {
+  *res = InterlockedRead(g_corr);
+  return S_OK;
+}
+
+HRESULT __stdcall RetranslatorAX::put_minimalWeight(long val) {
+  InterlockedExchange(&g_minWeight, val);
+  fireEvent(SetMinimalWeight);
+  return S_OK;
+}
+
+HRESULT __stdcall RetranslatorAX::put_corr(long val) {
+  InterlockedExchange(&g_corr, val);
+  fireEvent(SetCorr);
   return S_OK;
 }
 
 void __stdcall RetranslatorAX::setWeight(long weight) {
-  InterlockedExchange(&weightRaw, weight);
+  InterlockedExchange(&g_weightRaw, weight);
 }
 
 void __stdcall RetranslatorAX::setWeightFixed(long weight) {
-  InterlockedExchange(&weightFixed, weight);
+  InterlockedExchange(&g_weightFixed, weight);
 }
 
 HRESULT __stdcall RetranslatorAX::QueryInterface(REFIID riid, void **ppv)

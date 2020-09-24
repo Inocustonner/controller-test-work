@@ -165,7 +165,7 @@ const Settings init_settings(const inipp::Ini<char>& ini)
 		{ }
 		std::exit(1);
 	}
-	Control::OpenShared();
+	/*Control::OpenShared();
 
 	Control::OpenEventMain();
 	Control::syncMain();
@@ -175,7 +175,7 @@ const Settings init_settings(const inipp::Ini<char>& ini)
 	
 	Control::OpenEventDb();
 	Control::OpenMutexDebug();
-	Control::OpenMutexStore();
+	Control::OpenMutexStore();*/
 
 	Settings setts = {};
 	// constexpr auto ini_name = "ini.ini";

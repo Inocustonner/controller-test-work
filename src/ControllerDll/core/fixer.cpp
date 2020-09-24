@@ -2,8 +2,8 @@
 #include "Output.hpp"
 #include "Databases.hpp"
 #include "Init.hpp"
-#include "Reader.hpp"
-#include "Lights.hpp"
+// #include "Reader.hpp"
+// #include "Lights.hpp"
 
 #include <Error.hpp>
 
@@ -11,6 +11,17 @@
 #include <cstdlib>
 
 #include "fixer.h"
+
+#define STATUS_ERROR 5001
+#define STATUS_UNSTABLE 5002
+#define STATUS_STABLE 5003
+
+#define IMPORT_DLL extern "C" __declspec(dllimport)
+
+IMPORT_DLL void __stdcall setWeight(long weight);
+IMPORT_DLL void __stdcall setWeightFixed(long weight);
+IMPORT_DLL void __stdcall setStatus(long status);
+
 
 inline
 comptype phase1(const comptype p1, const bool is_stable)
@@ -20,8 +31,8 @@ comptype phase1(const comptype p1, const bool is_stable)
 	{
 		if (std::abs(p1 - state.p0s) > store_diff && is_stable)
 		{
-			store(state.com.c_str(), state.id.c_str(),
-				static_cast<int>(corr_weight), static_cast<int>(p1));
+			/*store(state.com.c_str(), state.id.c_str(),
+				static_cast<int>(corr_weight), static_cast<int>(p1));*/
 		}
 		state.p0s = p1;
 	}
@@ -60,6 +71,11 @@ comptype fix(const comptype p1, const bool is_stable)
 		dprintf(msg<1>());
 	}
 	state.p0 = p1;
+
+	setWeight(p1);
+	setWeightFixed(ret_value);
+	setStatus(is_stable ? STATUS_STABLE : STATUS_UNSTABLE);
+	
 	return ret_value;
 }
 
@@ -70,7 +86,7 @@ bool init_fixer(const inipp::Ini<char>& ini)
 	try
 	{
 		setts = init_settings(ini);
-		init_databases(setts.db_provider, setts.dbi_a);
+		//init_databases(setts.db_provider, setts.dbi_a);
 	}
 	catch (const ctrl::error& e)
 	{
@@ -79,7 +95,7 @@ bool init_fixer(const inipp::Ini<char>& ini)
 			std::system("pause");
 		std::exit(1);
 	}
-	std::thread th(com_reader, setts.pi_v, setts.suffix, setts.udentified_car_allowed);
-	th.detach();
+	/* std::thread th(com_reader, setts.pi_v, setts.suffix, setts.udentified_car_allowed);
+	th.detach(); */
 	return true;
 }

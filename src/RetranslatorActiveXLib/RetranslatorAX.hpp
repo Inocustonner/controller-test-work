@@ -11,8 +11,14 @@ class RetranslatorAX: public IRetranslatorAX {
    RetranslatorAX();
    ~RetranslatorAX();
 
-   HRESULT __stdcall get_getWeight(long *res) override;
-   HRESULT __stdcall get_getWeightFixed(long *res) override;
+   HRESULT __stdcall get_weight(long *res) override;
+   HRESULT __stdcall get_weightFixed(long *res) override;
+   HRESULT __stdcall get_status(long *res) override;
+   HRESULT __stdcall get_minimalWeight(long *res) override;
+   HRESULT __stdcall get_corr(long *res) override;
+
+   HRESULT __stdcall put_minimalWeight(long val) override;
+   HRESULT __stdcall put_corr(long val) override;
 
    // these 2 methods are not declared in .idl, because they are intended to be used by retranslator only
    void __stdcall setWeight(long weight) override;
