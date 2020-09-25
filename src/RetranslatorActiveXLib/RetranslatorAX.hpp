@@ -6,6 +6,9 @@
 #define IS_EQ_IID3(riid1, riid2, riid3) \
   ((IsEqualGUID(riid1, IID_IUnknown)) || (IsEqualGUID(riid1, riid2)) || (IsEqualGUID(riid1, riid3)))
 
+#define NO_CORR_WEIGHT 0 // receiving 0 value of for g_minimalWeight, means we don't want to apply correction
+#define NO_CORR_WEIGHT_VALUE 999999 // big value what weight will never reach
+
 class RetranslatorAX: public IRetranslatorAX {
   public:
    RetranslatorAX();

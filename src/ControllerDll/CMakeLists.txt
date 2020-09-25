@@ -10,29 +10,25 @@ find_package(ODBC)
 set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL")
 
 add_library(controller_core STATIC 
-	core/fixer.cpp 
-	core/Output.cpp 
-	core/State.cpp 
-	core/Databases.cpp 
-	core/Init.cpp 
-	# core/Reader.cpp 
-	core/SerialPool.cpp
-	core/Lights.cpp
-	core/mmsg.cpp
-	
 	core/encoding/Encode.cpp
 	core/encoding/MD5.cpp
 	
-	${CMAKE_SOURCE_DIR}/src/Control/Control.cpp)
+	core/fixer.cpp 
+	core/Output.cpp 
+	core/State.cpp 
+	core/Init.cpp 
+	core/mmsg.cpp)
 	
-target_link_libraries(controller_core serial.lib 
-								  dllInj.lib 
-								  ODBC::ODBC 
-								  odbccpp_static.lib
-								  Ws2_32.lib)
-set_property(TARGET controller_core APPEND PROPERTY INTERFACE_INCLUDE_DIRECTORIES
- $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/core>
- )
+target_link_libraries(controller_core PUBLIC retranslatorAX)
+									# Control
+									# serial.lib 
+								  # dllInj.lib 
+								  # ODBC::ODBC 
+								  # odbccpp_static.lib
+								  # Ws2_32.lib)
+target_include_directories(controller_core INTERFACE
+	$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/core>
+)
 set_target_properties(controller_core
 PROPERTIES
 ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_ARCHIVE_OUTPUT_DIRECTORY}/controller_core"
@@ -40,28 +36,12 @@ LIBRARY_OUTPUT_DIRECTORY "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/controller_core"
 RUNTIME_OUTPUT_DIRECTORY "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/controller_core"
 )
 
-								  
-#controller dll						  
-add_library(controller_dll SHARED dll/dllmain.cpp
-	dll/dll.cpp)
-target_link_libraries(controller_dll controller_core)
-target_compile_options(controller_dll PRIVATE "$<$<CONFIG:Release>:/GL>")
-target_link_options(controller_dll PRIVATE "$<$<CONFIG:Release>:/LTCG>")
-set_target_properties(controller_dll
-    PROPERTIES
-    ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_ARCHIVE_OUTPUT_DIRECTORY}/contoller_dll"
-    LIBRARY_OUTPUT_DIRECTORY "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/contoller_dll"
-    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/contoller_dll"
-	)
-
-
 #controller_standalone
 add_executable(controller_standalone standalone/main.cpp
 									 standalone/Retranslator.cpp
 									 standalone/Commands.cpp)
 
-target_link_libraries(controller_standalone controller_core 
-																						retranslatorAX)
+target_link_libraries(controller_standalone PRIVATE controller_core serial.lib)
 
 set_target_properties(controller_standalone
     PROPERTIES

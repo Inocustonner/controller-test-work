@@ -1,18 +1,14 @@
 #include "Output.hpp"
 #include "mmsg.hpp"
-#include <Control.hpp>
-
-// https://github.com/SAP/odbc-cpp-wrapper
-//#include <odbc/Connection.h>
-//#include <odbc/Exception.h>
-//#include <odbc/PreparedStatement.h>
 
 #include <tuple>
 #include <array>
 #include <cstdio>
 #include <cstdarg>
 
-static int log_lvl = default_log_lvl;
+static auto constexpr default_log_level = 2;
+
+static int log_lvl = default_log_level;
 static int msg_duration = 20000;
 
 int get_log_lvl()
@@ -53,31 +49,6 @@ static const char* make_buf(const char *fmt, Args&& ...args) noexcept
 	return buf.data();
 }
 
-
-static void dblog(int code, const char* str) noexcept
-{
-	std::lock_guard<std::mutex> guard(Control::get_main_mutex());
-
-	//Control::lockMutexDebug();
-	command_s* cmd_p = Control::get_command();
-	cmd_p->cmd = Cmd::Store_Debug;
-
-	data_s* data_p = Control::next_data(nullptr);
-	data_p->type = DataType::Int;
-	data_p->size = sizeof(int);
-	*reinterpret_cast<int*>(data_p->body()) = code;
-
-	data_p = Control::next_data(data_p);
-	data_p->type = DataType::Str;
-	data_p->size = std::strlen(str) + 1;
-	std::memcpy(data_p->body(), str, data_p->size);
-
-	//Control::releaseMutexDebug();
-	Control::SetEventMain();
-	Control::syncDb();
-}
-
-
 void dprintf(const char *fmt, ...)
 {
 	va_list vl;
@@ -86,8 +57,6 @@ void dprintf(const char *fmt, ...)
 	const char* str = make_buf(fmt, vl);
 	if (log_lvl > 0)
 		fprintf(stderr, "%s", str);
-	//if (log_lvl < 2)
-	//	dblog(-1, str);
 
 	va_end(vl);
 }
@@ -110,11 +79,6 @@ void dprintf(const msg_t msg)
 		{
 			mMsgBox(L"Warning", std::get<3>(msg), msg_duration);
 		}
-
-		//if (log_lvl < 2) // avoid multiple writing to db
-		//{
-		//	dblog(std::get<0>(msg), std::get<2>(msg));
-		//}
 	}
 	prev_code = std::get<0>(msg);
 	// msgbox

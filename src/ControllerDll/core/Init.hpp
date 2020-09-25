@@ -32,15 +32,4 @@ enum class DBEnum
 };
 constexpr auto DB_CNT = 2; // cars, store, store_info, debug
 
-
-struct Settings
-{
-	std::vector<Port_Info> pi_v;
-	std::array<DB_Auth, DB_CNT> dbi_a;
-	std::string suffix = "";
-	std::string db_provider = "PostgreSQL";
-	bool udentified_car_allowed = false;
-};
-
-const Settings init_settings(const inipp::Ini<char>& ini);
-void init_databases(const std::string& db_provider, const std::array<DB_Auth, DB_CNT>& dbi_a);
+const void init_settings(const inipp::Ini<char>& ini);

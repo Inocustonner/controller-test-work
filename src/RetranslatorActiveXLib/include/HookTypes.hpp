@@ -2,7 +2,7 @@
 
 enum EventType
 {
-  SetMinimalWeight,
+  SetMinimalWeight = 0,
   SetCorr,
 
   EventsCnt

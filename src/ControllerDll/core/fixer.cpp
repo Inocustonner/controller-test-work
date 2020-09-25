@@ -1,9 +1,8 @@
+#include <HookTypes.hpp>
+
 #include "State.hpp"
 #include "Output.hpp"
-#include "Databases.hpp"
 #include "Init.hpp"
-// #include "Reader.hpp"
-// #include "Lights.hpp"
 
 #include <Error.hpp>
 
@@ -12,16 +11,39 @@
 
 #include "fixer.h"
 
+
 #define STATUS_ERROR 5001
 #define STATUS_UNSTABLE 5002
 #define STATUS_STABLE 5003
 
-#define IMPORT_DLL extern "C" __declspec(dllimport)
+#define IMPORT_DLL __declspec(dllimport)
 
-IMPORT_DLL void __stdcall setWeight(long weight);
-IMPORT_DLL void __stdcall setWeightFixed(long weight);
-IMPORT_DLL void __stdcall setStatus(long status);
+extern "C" {
+	IMPORT_DLL void initDll();
+	IMPORT_DLL void setEventHook(EventType event, SetHook* onSet);
+	IMPORT_DLL void __stdcall setWeight(long weight);
+	IMPORT_DLL void __stdcall setWeightFixed(long weight);
+	IMPORT_DLL void __stdcall setStatus(long status);
+}
 
+void onSetCorr(long corr) {
+	if (-100 < corr && corr < 100)
+	{
+		const double corr_koef = 1 + corr / 100.0;
+		state.corr =
+				[&min_w = state.min_weight, corr_koef](comptype inp_w) -> comptype 
+					{ return static_cast<comptype>( (inp_w - min_w) * corr_koef ); };
+	}
+	else {
+		state.corr =
+				[corr_w = corr](comptype inp_w) -> comptype { return (inp_w - corr_w); };
+	}
+}
+
+void onSetMinWeight(long new_min_w) {
+	state.min_weight = new_min_w;
+	state.authorized = true;
+}
 
 inline
 comptype phase1(const comptype p1, const bool is_stable)
@@ -29,11 +51,6 @@ comptype phase1(const comptype p1, const bool is_stable)
 	comptype corr_weight = state.corr(p1);
 	if (is_stable)
 	{
-		if (std::abs(p1 - state.p0s) > store_diff && is_stable)
-		{
-			/*store(state.com.c_str(), state.id.c_str(),
-				static_cast<int>(corr_weight), static_cast<int>(p1));*/
-		}
 		state.p0s = p1;
 	}
 	return corr_weight;
@@ -56,15 +73,12 @@ void phase0(const comptype p1)
 comptype fix(const comptype p1, const bool is_stable)
 {
 	comptype ret_value = p1;
-	if (authorized())
+	if (state.authorized)
 	{
 		if (p1 < state.min_weight)
 			phase0(p1);
 		else
 			ret_value = phase1(p1, is_stable);
-
-	/*	if (get_last_light() == LightsEnum::Acc)
-			light(LightsEnum::Wait);*/
 	}
 	else if (p1 > reset_thr)
 	{
@@ -74,19 +88,24 @@ comptype fix(const comptype p1, const bool is_stable)
 
 	setWeight(p1);
 	setWeightFixed(ret_value);
-	setStatus(is_stable ? STATUS_STABLE : STATUS_UNSTABLE);
-	
+
+	#define AUTHORIZED_BYTES(a) (a ? 1000 : 2000)
+	#define STABLE_BYTES(s) (s ? 10 : 20)
+
+	setStatus(AUTHORIZED_BYTES(state.authorized) + STABLE_BYTES(is_stable));
+
 	return ret_value;
 }
 
 
 bool init_fixer(const inipp::Ini<char>& ini)
 {
-	Settings setts = {};
+	initDll();
+	setEventHook(SetMinimalWeight, onSetMinWeight);
+	setEventHook(SetCorr, onSetCorr);
 	try
 	{
-		setts = init_settings(ini);
-		//init_databases(setts.db_provider, setts.dbi_a);
+		init_settings(ini);
 	}
 	catch (const ctrl::error& e)
 	{
@@ -95,7 +114,5 @@ bool init_fixer(const inipp::Ini<char>& ini)
 			std::system("pause");
 		std::exit(1);
 	}
-	/* std::thread th(com_reader, setts.pi_v, setts.suffix, setts.udentified_car_allowed);
-	th.detach(); */
 	return true;
 }

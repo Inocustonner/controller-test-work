@@ -15,7 +15,7 @@ extern "C"
 {
   SHARED_VAR long g_weightRaw = 0;
   SHARED_VAR long g_weightFixed = 0;
-  SHARED_VAR long g_status = 0; // 0003 - com port error, 10** - authorized, 20** - unauthorized, **01 - stable, **02 - unstable
+  SHARED_VAR long g_status = 0; // 0003 - com port error, 10** - authorized, 20** - unauthorized, **10 - stable, **20 - unstable
 
   SHARED_VAR long g_minWeight = 0;
   SHARED_VAR long g_corr = 0;

@@ -2,7 +2,6 @@
 #include "macro.hpp"
 #include "../core/fixer.h"
 #include "../core/Output.hpp"
-#include <Control.hpp>
 #include <Encode.hpp>
 #include <Error.hpp>
 
@@ -15,12 +14,6 @@
 
 #include <Windows.h>
 
-#include <HookTypes.hpp>
-
-extern "C"{
-void initDll();
-void setEventHook(EventType event, SetHook *onSet);
-}
 using Time = std::chrono::high_resolution_clock;
 using ms = std::chrono::milliseconds;
 
@@ -144,26 +137,9 @@ static void modify_resp(bytestring &bs)
 	}
 }
 
-bool create_starter_proc(const std::string& current_dir) {
-		// init corep
-	HANDLE starter_h = Control::start_proc((current_dir + "starter.exe" + " controller_standalone.exe ").c_str());
-	if (starter_h == INVALID_HANDLE_VALUE) // bcs i dont use this handle here
-	{
-		MessageBoxW(NULL, L"Неудалось запустить 'starter.exe'", L"ERROR", MB_OK);
-		return false;
-	}
-	CloseHandle(starter_h);
-	return true;
-}
-
-void corrSet(long new_corr) {
-	printf("%d - NEW CORR\n", new_corr);
-}
 
 int main()
 {
-	initDll();
-	setEventHook(SetCorr, corrSet);
 #ifndef _DEBUG
 	constexpr auto iobuffer_size = 1024 * 16;
 	char iobuffer[iobuffer_size] = {};
@@ -200,9 +176,6 @@ int main()
 	fclose(fp);
 
 	ini.parse(std::stringstream(ss));
-	if (!create_starter_proc(current_dir)) {
-		std::exit(1);
-	}
 
 	if (!SetConsoleCtrlHandler(CtrlHandler, TRUE)) {
 		printf("Unnable to set console handler\n");

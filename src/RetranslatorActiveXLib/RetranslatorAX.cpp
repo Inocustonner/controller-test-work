@@ -69,7 +69,11 @@ HRESULT __stdcall RetranslatorAX::get_status(long *res) {
 }
 
 HRESULT __stdcall RetranslatorAX::get_minimalWeight(long *res) {
-  *res = InterlockedRead(g_minWeight);
+  auto m_w = InterlockedRead(g_minWeight);
+  if (m_w == NO_CORR_WEIGHT_VALUE)
+    *res = 0;
+  else
+    *res = m_w;
   return S_OK;
 }
 
@@ -79,7 +83,10 @@ HRESULT __stdcall RetranslatorAX::get_corr(long *res) {
 }
 
 HRESULT __stdcall RetranslatorAX::put_minimalWeight(long val) {
-  InterlockedExchange(&g_minWeight, val);
+  if (val == NO_CORR_WEIGHT)
+    InterlockedExchange(&g_minWeight, NO_CORR_WEIGHT_VALUE);
+  else
+    InterlockedExchange(&g_minWeight, val);
   fireEvent(SetMinimalWeight);
   return S_OK;
 }

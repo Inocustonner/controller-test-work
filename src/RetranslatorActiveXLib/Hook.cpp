@@ -57,7 +57,7 @@ static void listenFunc() {
         }
 
         case SetCorr: {
-          onSetCorrHook(InterlockedRead(g_minWeight));
+          onSetCorrHook(InterlockedRead(g_corr));
           ResetEvent(events[event_t]);
           break;
         }
