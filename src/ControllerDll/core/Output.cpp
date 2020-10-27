@@ -49,18 +49,6 @@ static const char* make_buf(const char *fmt, Args&& ...args) noexcept
 	return buf.data();
 }
 
-void dprintf(const char *fmt, ...)
-{
-	va_list vl;
-	va_start(vl, fmt);
-
-	const char* str = make_buf(fmt, vl);
-	if (log_lvl > 0)
-		fprintf(stderr, "%s", str);
-
-	va_end(vl);
-}
-
 
 void dprintf(const msg_t msg)
 {

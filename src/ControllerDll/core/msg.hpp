@@ -16,21 +16,10 @@ using msg_t = std::tuple<int, MsgType, const char*, const wchar_t*, bool>;
 constexpr std::array code_msg =
 {
 	// -1 is for custom messages
-	MSG(0, MsgType::Error,			"Error: double authorization\n",						"Авто на весах\nПопытка авторизации отклонена"),
-	NOREP_MSG(1, MsgType::Error,	"Error: Unauthorized driver\n",							"Неавторизованный водитель"),
-	MSG(2, MsgType::Error,			"Error: Invalid barcode\n",								"Неверный формат штрих кода"),
-	NOREP_MSG(3, MsgType::Error,	"Com port connecting error\n",							"Ошибка подключения com port'a"),
-	NOREP_MSG(4, MsgType::Warning,	"Unknown option ignored\n",								"Ошибка ini файла\nНеизвестная опция проигнорирована"),
-	MSG(5, MsgType::Error,			"Error while writing to a db\n",						"Ошибка записи базы данных"),
-	MSG(6, MsgType::Error,			"Error while reading from a db\n",						"Ошибка чтения базы данных"),
-	MSG(7, MsgType::Error,			"Error car id not found\n",								"Авто в базе данных не найдено"),
-	MSG(8, MsgType::Error,			"Error driver not found\n",								"Водитель в базе данных не найден"),
-	MSG(9, MsgType::Error,			"Error decoding ini file\n",							"Ошибка ini файла\nНе удалось расшифровать"),
-	MSG(10, MsgType::Error,			"Error connecting to db\n", 							"Ошибка базы данных\nНе удалось подключиться"),
-	MSG(11, MsgType::Error,			"Error storing to store_info\n",						"Ошибка записи базы данных\nНе удалось записать в store_info"),
-	MSG(12, MsgType::Error,			"Error openning ini file\n",							"Ошибка ini файла\nНе удалось открыть файл"),
-	MSG(13, MsgType::Warning,		"Warning no COM ports connected\n",						"Не указан порт подключения сканнера"),
-	MSG(14, MsgType::Warning,		"Warning reauthorization, new values will be used\n",	"Произведена повторная авторизация")
+	MSG(0, MsgType::Warning, "Error: Invalid timeSpanForStability, must be in {0..10 000}\nsetting to default", "Неверное значение timeSpanForStability \nдолжно быть в промежутке {0..10 000}\nустановка стандартного значения"),
+	MSG(1, MsgType::Error, "Error: Couldn't open ini.ini", "Не смог открыть ini.ini файл настроек"),
+	MSG(2, MsgType::Error, "Error: Couldn't decode ini.ini", "Не смог расшифровать ini.ini файл настроек"),
+	MSG(3, MsgType::Error, "Error: In Retranslator", "Ошибка в Retranslator, \nвключите консоль чтобы увидеть подробности\n")
 };
 
 #pragma warning(push)

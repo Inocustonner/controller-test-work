@@ -15,10 +15,16 @@ extern "C"
 {
   SHARED_VAR long g_weightRaw = 0;
   SHARED_VAR long g_weightFixed = 0;
-  SHARED_VAR long g_status = 0; // 0003 - com port error, 10** - authorized, 20** - unauthorized, **10 - stable, **20 - unstable
+  SHARED_VAR long g_status = 0; 
+  /*
+  90** - error, 9031 - com error on srcp, 0932 - com error on dstp, 
+  10** - authorized, 20** - unauthorized, **10 - stable, **20 - unstable
+  */
 
   SHARED_VAR long g_minWeight = 0;
   SHARED_VAR long g_corr = 0;
+
+  SHARED_VAR unsigned long created_process_pid = -1;
 }
 #pragma data_seg()
 
@@ -40,9 +46,9 @@ extern "C"
 
 STDAPI DllGetClassObject(const CLSID &clsid, const IID &iid, void **ppv)
 {
-  if (clsid == CLSID_RetranslatorAX)
+  if (clsid == CLSID_RetranslatorAX || clsid == CLSID_RetranslatorUtilsAX )
   {
-    Factory *factory = new (std::nothrow) Factory{};
+    Factory *factory = new (std::nothrow) Factory{clsid};
     if (factory)
       return factory->QueryInterface(iid, ppv);
     else

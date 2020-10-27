@@ -1,4 +1,4 @@
-#include "RetranslatorAX.hpp"
+#include "RetranslatorClassesAX.hpp"
 #include <Retranslator_i.c>
 #include "Hook.hpp"
 
@@ -8,6 +8,9 @@
 
 #pragma comment(lib, "comsupp.lib")
 #pragma comment(lib, "comsuppwd.lib")
+
+#define NO_CORR_WEIGHT 0 // receiving 0 value of for g_minimalWeight, means we don't want to apply correction
+#define NO_CORR_WEIGHT_VALUE 999999 // big value what weight will never reach
 
 #define InterlockedRead(var) InterlockedExchangeAdd(&(var), 0)
 #define EXTERN_SHARED extern "C" volatile
@@ -51,24 +54,24 @@ RetranslatorAX::~RetranslatorAX()
   g_objsInUse--;
 }
 
-HRESULT __stdcall RetranslatorAX::get_weight(long *res)
+HRESULT __stdcall RetranslatorAX::getWeight(long *res)
 {
   *res = InterlockedRead(g_weightRaw);
   return S_OK;
 }
 
-HRESULT __stdcall RetranslatorAX::get_weightFixed(long *res)
+HRESULT __stdcall RetranslatorAX::getWeightFixed(long *res)
 {
   *res = InterlockedRead(g_weightFixed);
   return S_OK;
 }
 
-HRESULT __stdcall RetranslatorAX::get_status(long *res) {
+HRESULT __stdcall RetranslatorAX::getStatus(long *res) {
   *res = InterlockedRead(g_status);
   return S_OK;
 }
 
-HRESULT __stdcall RetranslatorAX::get_minimalWeight(long *res) {
+HRESULT __stdcall RetranslatorAX::getMinimalWeight(long *res) {
   auto m_w = InterlockedRead(g_minWeight);
   if (m_w == NO_CORR_WEIGHT_VALUE)
     *res = 0;
@@ -77,12 +80,12 @@ HRESULT __stdcall RetranslatorAX::get_minimalWeight(long *res) {
   return S_OK;
 }
 
-HRESULT __stdcall RetranslatorAX::get_corr(long *res) {
+HRESULT __stdcall RetranslatorAX::getCorr(long *res) {
   *res = InterlockedRead(g_corr);
   return S_OK;
 }
 
-HRESULT __stdcall RetranslatorAX::put_minimalWeight(long val) {
+HRESULT __stdcall RetranslatorAX::setMinimalWeight(long val) {
   if (val == NO_CORR_WEIGHT)
     InterlockedExchange(&g_minWeight, NO_CORR_WEIGHT_VALUE);
   else
@@ -91,19 +94,19 @@ HRESULT __stdcall RetranslatorAX::put_minimalWeight(long val) {
   return S_OK;
 }
 
-HRESULT __stdcall RetranslatorAX::put_corr(long val) {
+HRESULT __stdcall RetranslatorAX::setCorr(long val) {
   InterlockedExchange(&g_corr, val);
   fireEvent(SetCorr);
   return S_OK;
 }
-
-void __stdcall RetranslatorAX::setWeight(long weight) {
-  InterlockedExchange(&g_weightRaw, weight);
-}
-
-void __stdcall RetranslatorAX::setWeightFixed(long weight) {
-  InterlockedExchange(&g_weightFixed, weight);
-}
+//
+//void __stdcall RetranslatorAX::setWeight(long weight) {
+//  InterlockedExchange(&g_weightRaw, weight);
+//}
+//
+//void __stdcall RetranslatorAX::setWeightFixed(long weight) {
+//  InterlockedExchange(&g_weightFixed, weight);
+//}
 
 HRESULT __stdcall RetranslatorAX::QueryInterface(REFIID riid, void **ppv)
 {

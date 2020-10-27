@@ -51,24 +51,10 @@ void inv_if(const std::map<KeyTM, ValTM>& map, KeyTt&& key, FuncT func)
 }
 
 
-static void debug_section(const Section_Map& debug_map) noexcept
-{
-	inv_if(debug_map, "LogLevel",
-		[](auto& pair_str){ set_log_lvl(std::stoi(pair_str->second)); });
-#if 0
-	if (get_log_lvl() > 0)
-		CreateConsole();
-#endif
-}
-
-
 static void default_section(const Section_Map& default_map) noexcept
 {
 	inv_if(default_map, "reset_thr",
 		[](auto& pair_str){ reset_thr = std::stoi(pair_str->second); });
-	
-	inv_if(default_map, "store_diff",
-		[](auto& pair_str){ store_diff = std::stoi(pair_str->second); });
 
 	inv_if(default_map, "min_weight",
 		[](auto& pair_str) { default_min_weight = std::stoi(pair_str->second); });
@@ -79,12 +65,6 @@ static void default_section(const Section_Map& default_map) noexcept
 
 const void init_settings(const inipp::Ini<char>& ini)
 {
-
-	if (ini.sections.contains("DEBUG"))
-	{
-		debug_section(ini.sections.find("DEBUG")->second);
-	}
-
 	// to avoid writing to not yet connected debug db
 
 	if (ini.sections.contains("DEFAULT"))

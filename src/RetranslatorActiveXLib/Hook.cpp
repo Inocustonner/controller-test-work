@@ -19,11 +19,13 @@ static HANDLE events[EventsCnt] = {};
 static bool stop = true;
 static std::thread listener_th;
 
+extern "C" {
+
 void fireEvent(EventType event) {
   SetEvent(events[event]);
 }
 
-extern "C"
+
 void setEventHook(EventType event, SetHook *onSet) {
   switch (event) {
 
@@ -35,6 +37,7 @@ void setEventHook(EventType event, SetHook *onSet) {
       onSetCorrHook = onSet;
       break;
   }
+}
 }
 
 static HANDLE createEvent(const char* name) {

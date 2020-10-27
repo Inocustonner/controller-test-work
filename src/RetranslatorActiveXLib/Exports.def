@@ -10,4 +10,5 @@ EXPORTS
 	setWeightFixed
 	setStatus
 	setEventHook
+	fireEvent
 	initDll

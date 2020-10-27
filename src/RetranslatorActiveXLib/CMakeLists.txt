@@ -7,6 +7,10 @@ add_library(retranslatorAX SHARED AXEntry.cpp
                           Factory.cpp
                           Registry.cpp
                           RetranslatorAX.cpp
+						  RetranslatorUtilsAX.cpp
+						  
+						  PipeQueueSystem/PipeQueueSystem.cpp
+						  
                           Retranslator.rc
                           Exports.def
                           Hook.cpp

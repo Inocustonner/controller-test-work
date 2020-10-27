@@ -1,7 +1,8 @@
 #include <Windows.h>
 #include <Retranslator_i.h>
 #include <Retranslator_i.c>
-
+#include <thread>
+#include <chrono>
 int main() {
   IRetranslator *ir = nullptr;
   CoInitialize(nullptr);
@@ -9,7 +10,7 @@ int main() {
                                 reinterpret_cast<void **>(&ir));
   if (SUCCEEDED(hr)) {
     long res;
-    ir->get_weight(&res);
+    ir->setCorr(50);
     ir->Release();
   }
   CoUninitialize();

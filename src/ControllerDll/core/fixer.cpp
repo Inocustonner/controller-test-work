@@ -11,16 +11,12 @@
 
 #include "fixer.h"
 
-
-#define STATUS_ERROR 5001
-#define STATUS_UNSTABLE 5002
-#define STATUS_STABLE 5003
-
 #define IMPORT_DLL __declspec(dllimport)
 
 extern "C" {
 	IMPORT_DLL void initDll();
 	IMPORT_DLL void setEventHook(EventType event, SetHook* onSet);
+	IMPORT_DLL void fireEvent(EventType event);
 	IMPORT_DLL void __stdcall setWeight(long weight);
 	IMPORT_DLL void __stdcall setWeightFixed(long weight);
 	IMPORT_DLL void __stdcall setStatus(long status);
@@ -64,7 +60,7 @@ void phase0(const comptype p1)
 		&& state.p0 > reset_thr 
 		&& reset_thr > p1)
 	{
-		dprintf("resetting\n");
+		printf("resetting\n");
 		reset_state();
 	}
 }
@@ -82,7 +78,7 @@ comptype fix(const comptype p1, const bool is_stable)
 	}
 	else if (p1 > reset_thr)
 	{
-		dprintf(msg<1>());
+		// do none
 	}
 	state.p0 = p1;
 
@@ -103,13 +99,14 @@ bool init_fixer(const inipp::Ini<char>& ini)
 	initDll();
 	setEventHook(SetMinimalWeight, onSetMinWeight);
 	setEventHook(SetCorr, onSetCorr);
+	fireEvent(SetCorr); // if corr was set before loading retranslator, set it
 	try
 	{
 		init_settings(ini);
 	}
 	catch (const ctrl::error& e)
 	{
-		dprintf(e.what());
+		printf(e.what());
 		if (get_log_lvl() > 1)
 			std::system("pause");
 		std::exit(1);

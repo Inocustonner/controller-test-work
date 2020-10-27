@@ -16,12 +16,12 @@ static void printHex(bytestring_view s)
 
 static std::tuple<std::string, int> next_word(const std::string_view line, int offset = 0)
 {
-  int i = offset;
+  unsigned i = offset;
   // skip spaces
   for (; i < line.size() && isspace(line[i]); i++)
     ;
   // find len of the found word
-  int len = 0;
+  unsigned len = 0;
   for (; i < line.size() && isalnum(line[i]); i++, len++)
     ;
   return std::tuple(
@@ -67,6 +67,7 @@ static void setup_serial(serial::Serial &com, const std::string_view settings)
       parity = serial::parity_none;
     com.setParity(parity);
   })
+  com.open();
 #undef IF_NEXT_WORD
 }
 
@@ -75,7 +76,6 @@ Retranslator::Retranslator(const std::string &source_port,
 {
   setup_serial(dstp, dst_port);
   setup_serial(srcp, source_port);
-
   modificator = [](bytestring &s) {};
 }
 
@@ -90,50 +90,84 @@ void Retranslator::setModificator(std::function<void(bytestring &)> modificator)
   this->modificator = modificator;
 }
 
+void try_open_port(serial::Serial& com, int com_id) {
+  com.close();
+  while (true) {
+    try {
+      com.open();
+      break;
+    }
+    catch(const serial::IOException&) {
+      #define STATUS_COM_ERROR 9030
+      setStatus(STATUS_COM_ERROR + com_id);
+    }
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+  }
+}
+
 void Retranslator::start(int ms_timeout)
 {
+  enum class COM_Member
+  {
+    Srcp = 1,
+    Dstp = 2
+  };
   dstp.setTimeout(serial::Timeout(0, ms_timeout));
 
   while (run_flag)
   {
-    bytestring bs{};
-    size_t to_read = srcp.available();
-    srcp.read(bs, std::max(to_read, static_cast<size_t>(1)));
+    COM_Member last_read_write = COM_Member::Srcp;
+    try
+    {
+      bytestring bs{};
+      size_t to_read = srcp.available();
+      srcp.read(bs, std::max(to_read, static_cast<size_t>(1)));
+      if (bs.size() == 0)
+        continue;
+      //printf("Got command: ");
+      //printHex(bs.data());
+      //putchar('\n');
 
-    if (bs.size() == 0)
-      continue;
-    //printf("Got command: ");
-    //printHex(bs.data());
-    //putchar('\n');
+      constexpr int commands_max_size = 50;
+      uint8_t commands_uniq[50] = {};
+      int size = parse_commands_unique(bs, commands_uniq, commands_max_size);
+      //printf("Sending on terminal: ");
+      //printHex(commands_uniq);
+      //putchar('\n');
 
-    constexpr int commands_max_size = 50;
-    uint8_t commands_uniq[50] = {};
-    int size = parse_commands_unique(bs, commands_uniq, commands_max_size);
-    //printf("Sending on terminal: ");
-    //printHex(commands_uniq);
-    //putchar('\n');
+      last_read_write = COM_Member::Dstp;
+      dstp.write(commands_uniq, size);
+      bs.clear();
 
-    dstp_mut.lock();
+      constexpr auto max_read = 9;
+      dstp.read(bs, max_read); // he needs time around 10-50ms to write operation, and we give that time via timeout on reading
 
-    dstp.write(commands_uniq, size);
-    bs.clear();
+      printf("Read: ");
+      printf("%.*s", bs.size(), bs.data());
+      putchar('\n');
 
-    constexpr auto max_read = 9;
-    dstp.read(bs, max_read); // he needs time around 10-50ms to write operation, and we give that time via timeout on reading
+      modificator(bs);
 
-    dstp_mut.unlock();
+      //printf("Returning: ");
+      //printHex(bs.data());
+      //putchar('\n');
+      //putchar('\n');
+      last_read_write = COM_Member::Srcp;
 
-    printf("Read: ");
-    printf("%.*s", bs.size(), bs.data());
-    putchar('\n');
-
-    modificator(bs);
-
-    //printf("Returning: ");
-    //printHex(bs.data());
-    //putchar('\n');
-    //putchar('\n');
-    if (bs.size())
-      srcp.write(bs);
+      if (bs.size())
+        srcp.write(bs);
+    } catch (const serial::IOException& e) {
+      constexpr auto error_suddenly_port_closed = 0;
+      int error_n = e.getErrorNumber();
+      if (error_n == error_suddenly_port_closed) {
+        if (last_read_write == COM_Member::Srcp)
+          try_open_port(srcp, static_cast<int>(last_read_write));
+        else
+          try_open_port(dstp, static_cast<int>(last_read_write));
+      }
+      else {
+        std::rethrow_exception(std::current_exception());
+      }
+    }
   }
 }

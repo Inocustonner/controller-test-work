@@ -8,6 +8,12 @@
 #include <atomic>
 #include <mutex>
 
+#define IMPORT_DLL __declspec(dllimport)
+extern "C" {
+	IMPORT_DLL void __stdcall setStatus(long status);
+}
+
+
 class Retranslator
 {
 public:
@@ -20,11 +26,9 @@ public:
   void setModificator(std::function<void(bytestring &)> modificator);
   void start(int ms_timeout = 50);
   bool run_flag = true;
-
+  
 private:
   serial::Serial srcp;
   serial::Serial dstp;
   std::function<void(bytestring &)> modificator;
-
-  std::mutex dstp_mut;
 };

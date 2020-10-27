@@ -1,7 +1,6 @@
 #include "State.hpp"
 
 comptype reset_thr = 15000;
-comptype store_diff = 200;
 comptype default_min_weight = 10000;
 
 State state{};									// externed

@@ -3,13 +3,14 @@ import "unknwn.idl";
 [
   uuid(F5D56A47-4C01-4C07-A033-3C8B87787F71),
   helpstring("Library with access to retranslator"),
-  control
+  //control
 ]
 library RetranslatorLib 
 {
   //importlib("stdole32.tlb");
   importlib("stdole2.tlb");
-
+  
+  // Main class interface
   [
     object,
     uuid(097344BD-7C6B-4F8C-9787-78C85E9EAC8B),
@@ -20,24 +21,89 @@ library RetranslatorLib
   ]
   interface IRetranslator : IDispatch 
   {
-    [id(10), propget] HRESULT weight([out, retval] long *res);
-    [id(12), propget] HRESULT weightFixed([out, retval] long *res);
-    [id(13), propget] HRESULT status([out, retval] long *res);
-    [id(14), propget] HRESULT minimalWeight([out, retval] long *res);
-    [id(15), propget] HRESULT corr([out, retval] long *res);
+    [id(20)] HRESULT getWeight([out, retval] long *res);
+    [id(22)] HRESULT getWeightFixed([out, retval] long *res);
+    [id(23)] HRESULT getStatus([out, retval] long *res);
+    [id(24)] HRESULT getMinimalWeight([out, retval] long *res);
+    [id(25)] HRESULT getCorr([out, retval] long *res);
 
-    [id(14), propput] HRESULT minimalWeight([in] long val);
-    [id(15), propput] HRESULT corr([in] long corr);
+    [id(26)] HRESULT setMinimalWeight([in] long val);
+    [id(27)] HRESULT setCorr([in] long corr);
   }
 
   [
     uuid(6425EC19-B96A-4648-B24A-52997A34911E),
     helpstring("Retranslator class"),
-    control
+    //control
   ]
   coclass RetranslatorAX
   {
     [default] interface IRetranslator;
     interface IDispatch;
   }
+
+  // Interface for RetranslatorUtils class
+  [
+      //{A5DAA4D9-6271-4DE3-9AA4-3232B839BFFD}
+      object,
+      uuid(A5DAA4D9-6271-4DE3-9AA4-3232B839BFFD),
+      version(1.0),
+      helpstring("Interface for RetranslatorUtils class"),
+      oleautomation,
+      dual
+  ]
+  interface IRetranslatorUtils : IDispatch
+  {
+      [id(10)] HRESULT run([in, string, ref] char* cmd);
+      [id(11)] HRESULT runW([in, string, ref] BSTR cmd);
+      [id(20)] HRESULT setTimeout([in] unsigned long ms_timeout);
+  }
+
+  [
+      //{280F8E09-7C79-403C-A944-436C5A66EFB6}
+      uuid(280F8E09-7C79-403C-A944-436C5A66EFB6),
+      helpstring("RetranslatorUtils class"),
+      //control
+  ]
+  coclass RetranslatorUtilsAX
+  {
+      [default] interface IRetranslatorUtils;
+      interface IDispatch;
+  }
 }
+
+//[
+//    //[Guid("9BE9374D-B560-42A1-A50E-AC23E2A9A7C9")]
+//    uuid(9BE9374D-B560-42A1-A50E-AC23E2A9A7C9),
+//    helpstring("Library with access to retranslator"),
+//    control
+//]
+//library RetranslatorUtilsLib
+//{
+//    // Interface for RetranslatorUtils class
+//    [
+//        object,
+//        uuid(A0AE0522-C9F5-4C25-8DD5-3C252991FD65),
+//        version(1.0),
+//        helpstring("Interface for RetranslatorUtils class"),
+//        oleautomation,
+//        dual
+//    ]
+//    interface IRetranslatorUtils : IDispatch
+//    {
+//        [id(10)] HRESULT run([in, string, ref] char* cmd);
+//        [id(11)] HRESULT runW([in, string, ref] BSTR cmd);
+//        [id(20)] HRESULT setTimeout([in] unsigned long ms_timeout);
+//    }
+//
+//    [
+//        uuid(54C890D4-5B7B-4C18-802E-EA501A2EEF3F),
+//        helpstring("RetranslatorUtils class"),
+//        control
+//    ]
+//    coclass RetranslatorUtilsAX
+//    {
+//        [default] interface IRetranslatorUtils;
+//        interface IDispatch;
+//    }
+//}

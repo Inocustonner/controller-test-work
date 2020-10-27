@@ -41,7 +41,7 @@ add_executable(controller_standalone standalone/main.cpp
 									 standalone/Retranslator.cpp
 									 standalone/Commands.cpp)
 
-target_link_libraries(controller_standalone PRIVATE controller_core serial.lib)
+target_link_libraries(controller_standalone controller_core serial.lib)
 
 set_target_properties(controller_standalone
     PROPERTIES

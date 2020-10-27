@@ -18,7 +18,6 @@ struct State
 };
 
 extern comptype reset_thr;
-extern comptype store_diff;
 extern comptype default_min_weight;
 extern State state;
 
