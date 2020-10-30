@@ -3,11 +3,15 @@
 #include "State.hpp"
 #include "Output.hpp"
 #include "Init.hpp"
+#include "mmsg.hpp"
 
 #include <Error.hpp>
 
 #include <thread>
 #include <cstdlib>
+#include <cstdio>
+
+#include <RetranslatorDefs.hpp>
 
 #include "fixer.h"
 
@@ -25,14 +29,14 @@ extern "C" {
 void onSetCorr(long corr) {
 	if (-100 < corr && corr < 100)
 	{
-		const double corr_koef = 1 + corr / 100.0;
+		const double corr_koef = corr / 100.0;
 		state.corr =
 				[&min_w = state.min_weight, corr_koef](comptype inp_w) -> comptype 
-					{ return static_cast<comptype>( (inp_w - min_w) * corr_koef ); };
+					{ return static_cast<comptype>( (inp_w - min_w) * corr_koef ) + inp_w; };
 	}
 	else {
 		state.corr =
-				[corr_w = corr](comptype inp_w) -> comptype { return (inp_w - corr_w); };
+				[corr_w = corr](comptype inp_w) -> comptype { return (inp_w + corr_w); };
 	}
 }
 
@@ -61,6 +65,11 @@ void phase0(const comptype p1)
 		&& reset_thr > p1)
 	{
 		printf("resetting\n");
+		if (get_log_lvl() > 1) {
+			wchar_t buffer_msg[100] = {};
+			swprintf(buffer_msg, std::size(buffer_msg), L"\"Resetting state\n↓%d\n- - - -< %d >- - - -\n%d\n\"", state.p0, reset_thr, p1);
+			mMsgBox(L"INFO", buffer_msg, get_msg_duration());
+		}
 		reset_state();
 	}
 }
@@ -97,6 +106,7 @@ comptype fix(const comptype p1, const bool is_stable)
 bool init_fixer(const inipp::Ini<char>& ini)
 {
 	initDll();
+	setStatus(STATE_FL_RETRANSLATOR_STARTED);
 	setEventHook(SetMinimalWeight, onSetMinWeight);
 	setEventHook(SetCorr, onSetCorr);
 	fireEvent(SetCorr); // if corr was set before loading retranslator, set it

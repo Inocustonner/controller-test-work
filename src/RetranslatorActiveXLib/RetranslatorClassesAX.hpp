@@ -23,7 +23,7 @@ public:
 
   HRESULT __stdcall setMinimalWeight(long val) override;
   HRESULT __stdcall setCorr(long val) override;
-
+	HRESULT __stdcall setNull() override;
   // these 2 methods are not declared in .idl, because they are intended to be
   // used by retranslator only void __stdcall setWeight(long weight) override;
   // void __stdcall setWeightFixed(long weight) override;

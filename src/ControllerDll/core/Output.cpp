@@ -16,6 +16,9 @@ int get_log_lvl()
 	return log_lvl;
 }
 
+int get_msg_duration() {
+	return msg_duration;
+}
 
 void set_log_lvl(const int lvl)
 {

@@ -99,6 +99,11 @@ HRESULT __stdcall RetranslatorAX::setCorr(long val) {
   fireEvent(SetCorr);
   return S_OK;
 }
+
+HRESULT __stdcall RetranslatorAX::setNull() {
+  fireEvent(SetNull);
+  return S_OK;
+}
 //
 //void __stdcall RetranslatorAX::setWeight(long weight) {
 //  InterlockedExchange(&g_weightRaw, weight);

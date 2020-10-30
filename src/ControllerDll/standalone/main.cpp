@@ -4,6 +4,8 @@
 #include "macro.hpp"
 #include <Encode.hpp>
 #include <Error.hpp>
+#include <HookTypes.hpp>
+#include <RetranslatorDefs.hpp>
 
 #include <algorithm>
 #include <chrono>
@@ -20,14 +22,17 @@ using ms = std::chrono::milliseconds;
 static auto timePointLast = Time::now();
 static ms timeSpanForStability =
     ms(500); // amount of time that weight shouldn't be changing to be stable
+static unsigned int weight_delta_for_stability = 20;
 static int lastWeight = 0;
 
 static BOOL can_exit = FALSE;
 static Retranslator *g_retranslator = nullptr;
+static bool add_set_null_cmd = false;
 
 #define IMPORT_DLL __declspec(dllimport)
 extern "C" {
-IMPORT_DLL void __stdcall setStatus(long status);
+  IMPORT_DLL void __stdcall setStatus(long status);
+  IMPORT_DLL void setEventHook(EventType event, SetHook* onSet);
 }
 
 BOOL WINAPI CtrlHandler(DWORD signal) {
@@ -40,6 +45,17 @@ BOOL WINAPI CtrlHandler(DWORD signal) {
     return TRUE;
   } else
     return FALSE;
+}
+
+static void setNullHook(long) {
+  add_set_null_cmd = true;
+}
+
+static void modifyRequest(bytestring& bs) {
+  if (add_set_null_cmd) {
+    add_set_null_cmd = false;
+    bs.push_back(0x0D);
+  }
 }
 
 static size_t find_weight_response(const bytestring_view bsv) {
@@ -98,7 +114,7 @@ static void modify_resp(bytestring &bs) {
           extract_weight(ans_start_pos, bytestring_view{bs.data(), bs.size()});
       bool stable = false;
 
-      if (lastWeight == weight) {
+      if ((unsigned int)std::abs(lastWeight - weight) <= weight_delta_for_stability) {
         auto timeCurrentPoint = Time::now();
         if (timeCurrentPoint - timePointLast >= timeSpanForStability) {
           stable = true;
@@ -135,9 +151,9 @@ static void modify_resp(bytestring &bs) {
 
 int main() {
 #ifndef _DEBUG
-  constexpr auto iobuffer_size = 1024 * 16;
-  char iobuffer[iobuffer_size] = {};
-  std::setvbuf(stdout, iobuffer, _IOFBF, iobuffer_size);
+  // constexpr auto iobuffer_size = 1024 * 16;
+  // char iobuffer[iobuffer_size] = {};
+  // std::setvbuf(stdout, iobuffer, _IOFBF, iobuffer_size);
 #endif
   // find current_dir
   char path_buf[MAX_PATH + 1] = {};
@@ -195,13 +211,20 @@ int main() {
         std::stoi(ini.sections["DEFAULT"]["Weights-reading-timeout"]);
     timeSpanForStability =
         ms(std::stoi(ini.sections["DEFAULT"]["Time-span-for-stability-ms"]));
+    
+    weight_delta_for_stability = std::stoi(ini.sections["DEFAULT"]["Weight-delta-for-stability"]);
+    
     if (timeSpanForStability > ms(10000)) {
       dprintf(msg<0>());
       timeSpanForStability = ms(500);
     }
     auto r = Retranslator(src_port, dst_port);
     g_retranslator = &r;
+    
+    setEventHook(SetNull, setNullHook);
+    
     r.setModificator(modify_resp);
+    r.setRequestModificator(modifyRequest);
     r.start(ms_reading_timeout);
   } catch (const std::exception &e) {
     if (debug_console == "0")
@@ -212,6 +235,7 @@ int main() {
     if (debug_console != "0")
         system("pause");
   }
+  setStatus(STATE_ERROR(STATE_L_RETRANSLATOR_ERROR));
   can_exit = TRUE;
   return 0;
 }

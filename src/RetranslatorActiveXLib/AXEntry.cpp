@@ -3,6 +3,7 @@
 #include <atomic>
 #include "Factory.hpp"
 #include "Hook.hpp"
+#include "include/RetranslatorDefs.hpp"
 
 HMODULE g_module = NULL;
 std::atomic_long g_objsInUse = 0;
@@ -15,7 +16,7 @@ extern "C"
 {
   SHARED_VAR long g_weightRaw = 0;
   SHARED_VAR long g_weightFixed = 0;
-  SHARED_VAR long g_status = 0; 
+  SHARED_VAR long g_status = STATE_ERROR(STATE_L_RETRANSLATOR_ERROR);
   /*
   90** - error, 9031 - com error on srcp, 0932 - com error on dstp, 
   10** - authorized, 20** - unauthorized, **10 - stable, **20 - unstable

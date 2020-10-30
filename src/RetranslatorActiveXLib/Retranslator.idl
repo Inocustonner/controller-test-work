@@ -29,6 +29,7 @@ library RetranslatorLib
 
     [id(26)] HRESULT setMinimalWeight([in] long val);
     [id(27)] HRESULT setCorr([in] long corr);
+    [id(28)] HRESULT setNull();
   }
 
   [
