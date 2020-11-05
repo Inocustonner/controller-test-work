@@ -1,33 +1,30 @@
 #pragma once
-// #include <Retranslator_i.h>
 
-// #include <atomic>
+#define InterlockedReadStatus(p_dest_var, p_src_status_var) \
+  (p_dest_var)->f_long = InterlockedExchangeAdd(&(p_src_status_var)->f_long, 0)
 
-using uint = unsigned int;
+#define InterlockedSetStatus(p_dest_status_var, src_var) \
+  InterlockedExchange(&(p_dest_status_var)->f_long, (src_var).f_long)
 
-template<uint higher_flag, uint lower_flag>
-constexpr uint compose_state() {
-	static_assert(higher_flag >= 1000 && higher_flag < 10000);
-	static_assert(lower_flag < 100);
-	
-	return higher_flag + lower_flag;
-}
+enum ErrorCode: long
+{
+ NoErrors = 0,
+ ErrorNotStarted = 1,
+ ErrorNotReady = 2,
+ ErrorRetranslatorEndPort = 3,
+ ErrorRetranslatorWeightsPort = 4,
+ ErrorInvalidData = 5
+};
 
-#define COMPOSE_STATE(higher_flag, lower_flag) compose_state<higher_flag, lower_flag>()
-
-#define STATE_H_AUTHORIZED 1000
-#define STATE_H_UNAUTHORIZED 2000
-
-#define STATE_L_STABLE_WEIGHT 0010
-#define STATE_L_UNSTABLE_WEIGHT 0020
-
-#define STATE_H_ERROR 9000
-
-#define STATE_L_ERROR_SRC_PORT 0031
-#define STATE_L_ERROR_DST_PORT 0032
-
-#define STATE_L_RETRANSLATOR_ERROR 01
-
-#define STATE_ERROR(err_l_flag) COMPOSE_STATE(STATE_H_ERROR, err_l_flag)
-
-#define STATE_FL_RETRANSLATOR_STARTED 8000
+struct Status {
+  union {
+    struct {
+      unsigned int auth : 1;
+      unsigned int stability : 1;
+      unsigned int err : 30;
+    };
+    long f_long;
+    // unsigned long f_ulong;
+  };
+};
+static_assert(sizeof(Status) == sizeof(long));

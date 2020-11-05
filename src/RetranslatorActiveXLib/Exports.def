@@ -6,9 +6,14 @@ EXPORTS
 	DllCanUnloadNow	    PRIVATE
 	DllRegisterServer   PRIVATE
 	DllUnregisterServer PRIVATE
+	
 	setWeight
 	setWeightFixed
-	setStatus
 	setEventHook
 	fireEvent
 	initDll
+
+	setStatusErr
+	setStatusStability
+	setStatusAuth
+	clearStatus

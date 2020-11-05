@@ -1,7 +1,7 @@
 #include "RetranslatorClassesAX.hpp"
 #include <Retranslator_i.c>
 #include "Hook.hpp"
-
+#include "include/RetranslatorDefs.hpp"
 #include <comutil.h>
 #include <windows.h>
 #include <string>
@@ -15,12 +15,17 @@
 #define InterlockedRead(var) InterlockedExchangeAdd(&(var), 0)
 #define EXTERN_SHARED extern "C" volatile
 
+#define INIT_STATUS(status_var) \
+  Status status_var = {}; \
+  InterlockedReadStatus(&status_var, &g_status);
+
+
 extern HMODULE g_module;
 extern std::atomic_long g_objsInUse;
 
 EXTERN_SHARED long g_weightRaw;
 EXTERN_SHARED long g_weightFixed;
-EXTERN_SHARED long g_status;
+EXTERN_SHARED Status g_status;
 EXTERN_SHARED long g_minWeight;
 EXTERN_SHARED long g_corr;
 
@@ -66,11 +71,6 @@ HRESULT __stdcall RetranslatorAX::getWeightFixed(long *res)
   return S_OK;
 }
 
-HRESULT __stdcall RetranslatorAX::getStatus(long *res) {
-  *res = InterlockedRead(g_status);
-  return S_OK;
-}
-
 HRESULT __stdcall RetranslatorAX::getMinimalWeight(long *res) {
   auto m_w = InterlockedRead(g_minWeight);
   if (m_w == NO_CORR_WEIGHT_VALUE)
@@ -104,14 +104,39 @@ HRESULT __stdcall RetranslatorAX::setNull() {
   fireEvent(SetNull);
   return S_OK;
 }
-//
-//void __stdcall RetranslatorAX::setWeight(long weight) {
-//  InterlockedExchange(&g_weightRaw, weight);
-//}
-//
-//void __stdcall RetranslatorAX::setWeightFixed(long weight) {
-//  InterlockedExchange(&g_weightFixed, weight);
-//}
+
+HRESULT __stdcall RetranslatorAX::getStatus(long *res) {
+  INIT_STATUS(s);
+  *res = s.err;
+  return S_OK;
+}
+
+HRESULT __stdcall RetranslatorAX::getAuth(long *f_auth) {
+  INIT_STATUS(s);
+  if (s.err == 0) {
+    *f_auth = s.auth;
+  }
+  else {
+    *f_auth = -1;
+  }
+  return S_OK;
+}
+
+HRESULT __stdcall RetranslatorAX::getStab(long *f_stability) {
+  INIT_STATUS(s);
+  if (s.err == 0) {
+    *f_stability = s.stability;
+  }
+  else {
+    *f_stability = -1;
+  }
+  return S_OK;
+}
+
+HRESULT __stdcall RetranslatorAX::clearAuth() {
+  fireEvent(ClearAuth);
+  return S_OK;
+}
 
 HRESULT __stdcall RetranslatorAX::QueryInterface(REFIID riid, void **ppv)
 {

@@ -13,7 +13,8 @@ extern "C" volatile long g_corr;
 static void set_def_(long) {}
 static SetHook *onSetMinimalWeightHook = set_def_;
 static SetHook *onSetCorrHook = set_def_;
-static SetHook *onSetNullHook = set_def_;
+static SetHook* onSetNullHook = set_def_;
+static SetHook* onClearAuthHook = set_def_;
 
 static HANDLE events[EventsCnt] = {};
 
@@ -36,6 +37,10 @@ void setEventHook(EventType event, SetHook *onSet) {
 
   case SetNull:
     onSetNullHook = onSet;
+    break;
+
+  case ClearAuth:
+    onClearAuthHook = onSet;
     break;
   }
 }
@@ -69,6 +74,12 @@ static void listenFunc() {
     case SetNull: {
       onSetNullHook(0);
       ResetEvent(events[event_t]);
+      break;
+    }
+    case ClearAuth: {
+      onClearAuthHook(0);
+      ResetEvent(events[event_t]);
+      break;
     }
     }
   }
@@ -78,6 +89,7 @@ void initListener() {
   events[SetMinimalWeight] = createEvent("SetMinimalWeightEvent");
   events[SetCorr] = createEvent("SetCorr");
   events[SetNull] = createEvent("SetNull");
+  events[ClearAuth] = createEvent("ClearAuth");
 }
 
 void startListener() {

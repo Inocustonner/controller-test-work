@@ -15,6 +15,7 @@ struct State
 	comptype p0s = 0; // prev stable weight
 
 	bool authorized = false;
+	bool passed_upper_gate = false;
 };
 
 extern comptype reset_thr;

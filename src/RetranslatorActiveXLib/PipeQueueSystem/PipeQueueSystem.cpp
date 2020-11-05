@@ -1,3 +1,5 @@
+#define _CRT_SECURE_NO_WARNINGS
+
 #include "PipeQueueSystem.hpp"
 #include "SafeQueue.hpp"
 
@@ -31,7 +33,7 @@ LRESULT CALLBACK CBTProc(_In_ int nCode, _In_ WPARAM wParam,
   return 0;
 }
 
-static HANDLE createProc(std::wstring_view cmd) {
+static DWORD createProc(std::wstring_view cmd) {
   STARTUPINFOW si = {};
   si.cb = sizeof(si);
   si.dwFlags = STARTF_USESHOWWINDOW;
@@ -43,13 +45,14 @@ static HANDLE createProc(std::wstring_view cmd) {
                              CREATE_SUSPENDED, NULL, NULL, &si, &pi);
   created_process_pid = pi.dwProcessId;
   ResumeThread(pi.hThread);
-
-  if (!succ) {
-    return INVALID_HANDLE_VALUE;
-  }
+  CloseHandle(pi.hProcess);
   CloseHandle(pi.hThread);
 
-  return pi.hProcess;
+  if (!succ) {
+    return -1;
+  }
+
+  return pi.dwProcessId;
 }
 
 static void _run() {
@@ -66,20 +69,26 @@ static void _run() {
     created_process_pid = -1;
     HHOOK h = SetWindowsHookExA(WH_CBT, CBTProc, g_module, 0);
 		
-    HANDLE proc_handle = createProc(cmd);
-    if (proc_handle == INVALID_HANDLE_VALUE)
+    DWORD proc_id= createProc(cmd);
+    if (proc_id == -1)
       continue;
-		
+		HANDLE proc_handle = OpenProcess(PROCESS_ALL_ACCESS, FALSE, proc_id);
     DWORD r = WaitForSingleObject(proc_handle, wait_timeout);
     UnhookWindowsHookEx(h);
     if (r == WAIT_TIMEOUT) {
+      //char buffer[50] = {};
+      //sprintf(buffer, "taskkill /F /PID %d", created_process_pid);
+      //system(buffer);
       TerminateProcess(proc_handle, 0x0);
     }
     CloseHandle(proc_handle);
   }
 }
 
-void start_pipe_queue() { runner = std::thread(_run); }
+void start_pipe_queue() { 
+    finish = false;
+    runner = std::thread(_run); 
+}
 
 void stop_pipe_queue() {
   // may hang if at the time of finish thread is not wating

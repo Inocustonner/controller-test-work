@@ -11,4 +11,5 @@ void reset_state()
 	state.p0s = 0;
 	state.min_weight = reset_thr;
 	state.authorized = false;
+	state.passed_upper_gate = false;
 }

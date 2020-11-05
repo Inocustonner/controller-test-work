@@ -10,7 +10,7 @@
 
 #define IMPORT_DLL __declspec(dllimport)
 extern "C" {
-IMPORT_DLL void __stdcall setStatus(long status);
+IMPORT_DLL void __stdcall setStatusErr(long status);
 }
 
 class Retranslator {

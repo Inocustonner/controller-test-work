@@ -11,16 +11,14 @@ std::atomic_long g_objsInUse = 0;
 #define ALIGN32 alignas(32)
 #define SHARED_VAR ALIGN32 volatile
 
+#define STATE_0 (ErrorNotStarted << 2)
+
 #pragma data_seg(".data_shared")
 extern "C"
 {
   SHARED_VAR long g_weightRaw = 0;
   SHARED_VAR long g_weightFixed = 0;
-  SHARED_VAR long g_status = STATE_ERROR(STATE_L_RETRANSLATOR_ERROR);
-  /*
-  90** - error, 9031 - com error on srcp, 0932 - com error on dstp, 
-  10** - authorized, 20** - unauthorized, **10 - stable, **20 - unstable
-  */
+  SHARED_VAR Status g_status = Status{ .f_long = STATE_0 };
 
   SHARED_VAR long g_minWeight = 0;
   SHARED_VAR long g_corr = 0;
@@ -39,15 +37,37 @@ extern "C"
   {
     InterlockedExchange(&g_weightFixed, weight);
   }
-  void __stdcall setStatus(long status)
+  void __stdcall setStatusErr(long err_code)
   {
-    InterlockedExchange(&g_status, status);
+    Status s;
+    InterlockedReadStatus(&s, &g_status);
+    s.err = err_code;
+    
+    InterlockedSetStatus(&g_status, s);
+  }
+  void __stdcall setStatusStability(bool stability) {
+    Status s;
+    InterlockedReadStatus(&s, &g_status);
+    s.stability = (int)stability;
+
+    InterlockedSetStatus(&g_status, s);
+  }
+  void __stdcall setStatusAuth(bool auth) {
+    Status s;
+    InterlockedReadStatus(&s, &g_status);
+    s.auth = (int)auth;
+
+    InterlockedSetStatus(&g_status, s);
+  }
+  void __stdcall clearStatus() {
+    Status s = {};
+    InterlockedSetStatus(&g_status, s);
   }
 }
 
 STDAPI DllGetClassObject(const CLSID &clsid, const IID &iid, void **ppv)
 {
-  if (clsid == CLSID_RetranslatorAX || clsid == CLSID_RetranslatorUtilsAX )
+  if (clsid == CLSID_RetranslatorAX || clsid == CLSID_RetranslatorUtilsAX)
   {
     Factory *factory = new (std::nothrow) Factory{clsid};
     if (factory)

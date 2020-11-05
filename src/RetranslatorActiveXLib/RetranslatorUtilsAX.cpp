@@ -59,8 +59,8 @@ HRESULT __stdcall RetranslatorUtilsAX::run(unsigned char *cmd) {
   return S_OK;
 }
 
-HRESULT __stdcall RetranslatorUtilsAX::runW(wchar_t *cmd) {
-  pipe_push_cmd(cmd);
+HRESULT __stdcall RetranslatorUtilsAX::runW(VARIANT* cmd) {
+  pipe_push_cmd(V_BSTR(cmd));
   return S_OK;
 }
 

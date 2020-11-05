@@ -23,13 +23,18 @@ library RetranslatorLib
   {
     [id(20)] HRESULT getWeight([out, retval] long *res);
     [id(22)] HRESULT getWeightFixed([out, retval] long *res);
-    [id(23)] HRESULT getStatus([out, retval] long *res);
     [id(24)] HRESULT getMinimalWeight([out, retval] long *res);
     [id(25)] HRESULT getCorr([out, retval] long *res);
 
     [id(26)] HRESULT setMinimalWeight([in] long val);
     [id(27)] HRESULT setCorr([in] long corr);
     [id(28)] HRESULT setNull();
+
+    [id(30)] HRESULT getStatus([out, retval] long *err_status);
+    [id(31)] HRESULT getAuth([out, retval] long *f_auth);
+    [id(32)] HRESULT getStab([out, retval] long *f_stability);
+
+    [id(33)] HRESULT clearAuth();
   }
 
   [
@@ -56,7 +61,7 @@ library RetranslatorLib
   interface IRetranslatorUtils : IDispatch
   {
       [id(10)] HRESULT run([in, string, ref] char* cmd);
-      [id(11)] HRESULT runW([in, string, ref] BSTR cmd);
+      [id(11)] HRESULT runW([in, ref] VARIANT* cmd);
       [id(20)] HRESULT setTimeout([in] unsigned long ms_timeout);
   }
 
@@ -71,40 +76,41 @@ library RetranslatorLib
       [default] interface IRetranslatorUtils;
       interface IDispatch;
   }
-}
 
-//[
-//    //[Guid("9BE9374D-B560-42A1-A50E-AC23E2A9A7C9")]
-//    uuid(9BE9374D-B560-42A1-A50E-AC23E2A9A7C9),
-//    helpstring("Library with access to retranslator"),
-//    control
-//]
-//library RetranslatorUtilsLib
-//{
-//    // Interface for RetranslatorUtils class
-//    [
-//        object,
-//        uuid(A0AE0522-C9F5-4C25-8DD5-3C252991FD65),
-//        version(1.0),
-//        helpstring("Interface for RetranslatorUtils class"),
-//        oleautomation,
-//        dual
-//    ]
-//    interface IRetranslatorUtils : IDispatch
-//    {
-//        [id(10)] HRESULT run([in, string, ref] char* cmd);
-//        [id(11)] HRESULT runW([in, string, ref] BSTR cmd);
-//        [id(20)] HRESULT setTimeout([in] unsigned long ms_timeout);
-//    }
-//
-//    [
-//        uuid(54C890D4-5B7B-4C18-802E-EA501A2EEF3F),
-//        helpstring("RetranslatorUtils class"),
-//        control
-//    ]
-//    coclass RetranslatorUtilsAX
-//    {
-//        [default] interface IRetranslatorUtils;
-//        interface IDispatch;
-//    }
-//}
+
+  //// Interface for RetranslatorComPort class
+  //[
+  //    //{2898B2A8-3096-4A0A-9581-CD09F4D1070E}
+  //    object,
+  //    uuid(2898B2A8-3096-4A0A-9581-CD09F4D1070E),
+  //    version(1.0),
+  //    helpstring("Interface for RetranslatorComPort class"),
+  //    oleautomation,
+  //    dual
+  //]
+  //interface IRetranslatorComPort : IDispatch
+  //{
+  //  [id(10)] HRESULT openPort([in] unsigned long port_n, [in] unsigned long baudrate, [in] unsigned long bytesize, [out, retval] long *status);
+  //  [id(11)] HRESULT closePort();
+
+  //  [id(15)] HRESULT setSoftwareSuffix([in] byte suffix);
+  //  [id(16)] HRESULT setReadTimeout([in] long ms, [out, retval] long *status);
+  //  
+  //  [id(20)] HRESULT write([in, string, ref] const byte* info);
+  //  [id(21)] HRESULT read(unsigned long read_size, [out, retval, string]BSTR* read_info);
+
+  //  [id(30)] HRESULT getLastError([out, retval] long *status);
+  //}
+
+  //[
+  //    //{520CD17F-F06D-4E80-BE7B-A44FC07B9870}
+  //    uuid(520CD17F-F06D-4E80-BE7B-A44FC07B9870),
+  //    helpstring("RetranslatorComPort class"),
+  //    //control
+  //]
+  //coclass RetranslatorComPort
+  //{
+  //    [default] interface IRetranslatorComPort;
+  //    interface IDispatch;
+  //}
+}

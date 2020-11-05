@@ -4,7 +4,8 @@ enum EventType
 {
   SetMinimalWeight = 0,
   SetCorr,
-	SetNull,
+  SetNull,
+  ClearAuth,
 	
   EventsCnt
 };

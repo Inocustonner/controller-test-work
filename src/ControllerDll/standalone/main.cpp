@@ -2,6 +2,8 @@
 #include "../core/fixer.h"
 #include "Retranslator.hpp"
 #include "macro.hpp"
+
+#include <mmsg.hpp>
 #include <Encode.hpp>
 #include <Error.hpp>
 #include <HookTypes.hpp>
@@ -31,8 +33,8 @@ static bool add_set_null_cmd = false;
 
 #define IMPORT_DLL __declspec(dllimport)
 extern "C" {
-  IMPORT_DLL void __stdcall setStatus(long status);
-  IMPORT_DLL void setEventHook(EventType event, SetHook* onSet);
+IMPORT_DLL void __stdcall setStatusErr(long status);
+IMPORT_DLL void setEventHook(EventType event, SetHook *onSet);
 }
 
 BOOL WINAPI CtrlHandler(DWORD signal) {
@@ -47,11 +49,9 @@ BOOL WINAPI CtrlHandler(DWORD signal) {
     return FALSE;
 }
 
-static void setNullHook(long) {
-  add_set_null_cmd = true;
-}
+static void setNullHook(long) { add_set_null_cmd = true; }
 
-static void modifyRequest(bytestring& bs) {
+static void modifyRequest(bytestring &bs) {
   if (add_set_null_cmd) {
     add_set_null_cmd = false;
     bs.push_back(0x0D);
@@ -66,16 +66,15 @@ static size_t find_weight_response(const bytestring_view bsv) {
     // we have found '=' now we need to count how many number reserved bytes we
     // have if it's >=7 and all the chars there is numbers or ' ' | '$' | '%', ,
     // then return pos pointing on them otherwise return npos
-    constexpr std::string_view alphabet = " 0123456789$%";
+    constexpr std::string_view alphabet = " -0123456789$%";
     // +8 and not +9, bcs we care only about numbers, $ or % flag is not in our
     // interest, though i leave them in alphabet
-                for
-                  RANGE(pos + 1, pos + 7) {
-                    if (alphabet.find(static_cast<char>(bsv[i])) ==
-                        std::string_view::npos)
-                      goto RETURN_NPOS;
-                  }
-                return pos;
+    for
+      RANGE(pos + 1, pos + 7) {
+        if (alphabet.find(static_cast<char>(bsv[i])) == std::string_view::npos)
+          goto RETURN_NPOS;
+      }
+    return pos;
   }
 RETURN_NPOS:
   return std::string::npos;
@@ -83,18 +82,18 @@ RETURN_NPOS:
 
 inline int extract_weight(size_t ans_start_pos, const bytestring_view bsv) {
   int res = 0;
-  // skip first 2 syms "=(-| )", because vesysoft don't use them
-  // i in [2, 7]
+  int sign = 1; // 1 for '+', -1 for '-'
+  // skip '='
+  // i in [1, 7]
   // in vesysoft, if given "1 2 3" result = 123, so we ignore spaces too
-        for
-          RANGE(ans_start_pos + 2, ans_start_pos + 8) {
-            if (isdigit(bsv[i])) {
-              res = res * 10 +
-                    CHAR_TO_INT(bsv[i]); // bcs answer '33 $= 1345' is still
-                                         // valid we need to search circular
-            }
-          }
-        return res;
+  for
+    RANGE(ans_start_pos + 1, ans_start_pos + 8) {
+      if (isdigit(bsv[i])) {
+        res = res * 10 + CHAR_TO_INT(bsv[i]);
+      } else if (bsv[i] == '-')
+        sign = -1;
+    }
+  return res * sign;
 }
 
 // Weight values may be dirty so we need to decline them
@@ -114,7 +113,8 @@ static void modify_resp(bytestring &bs) {
           extract_weight(ans_start_pos, bytestring_view{bs.data(), bs.size()});
       bool stable = false;
 
-      if ((unsigned int)std::abs(lastWeight - weight) <= weight_delta_for_stability) {
+      if ((unsigned int)std::abs(lastWeight - weight) <=
+          weight_delta_for_stability) {
         auto timeCurrentPoint = Time::now();
         if (timeCurrentPoint - timePointLast >= timeSpanForStability) {
           stable = true;
@@ -145,8 +145,11 @@ static void modify_resp(bytestring &bs) {
         bs.insert(std::end(bs), std::cbegin(buf), std::cend(buf));
       }
       lastWeight = weight;
+      setStatusErr(ErrorCode::NoErrors);
+      return;
     }
   }
+  setStatusErr(ErrorCode::ErrorInvalidData);
 }
 
 int main() {
@@ -178,7 +181,7 @@ int main() {
       throw ctrl::error("Failed to open file %s\n", path_to_ini.c_str());
     }
     fdecode(ss, fp);
-  } catch (const ctrl::error &e) {
+  } catch (const ctrl::error &) {
     dprintf(msg<1>());
     std::exit(1);
   } catch (const std::runtime_error &e) {
@@ -197,9 +200,12 @@ int main() {
   }
 
   init_fixer(ini);
-
+  
+  setStatusErr(ErrorCode::ErrorNotReady);
+  
   // start retranslator
   const std::string debug_console = ini.sections["DEBUG"]["LogLevel"];
+  set_log_lvl(std::stoi(debug_console));
   try {
     if (debug_console == "0") {
       ::ShowWindow(::GetConsoleWindow(), SW_HIDE);
@@ -211,31 +217,53 @@ int main() {
         std::stoi(ini.sections["DEFAULT"]["Weights-reading-timeout"]);
     timeSpanForStability =
         ms(std::stoi(ini.sections["DEFAULT"]["Time-span-for-stability-ms"]));
-    
-    weight_delta_for_stability = std::stoi(ini.sections["DEFAULT"]["Weight-delta-for-stability"]);
-    
+
+    weight_delta_for_stability =
+        std::stoi(ini.sections["DEFAULT"]["Weight-delta-for-stability"]);
+
     if (timeSpanForStability > ms(10000)) {
       dprintf(msg<0>());
       timeSpanForStability = ms(500);
     }
     auto r = Retranslator(src_port, dst_port);
     g_retranslator = &r;
-    
+
     setEventHook(SetNull, setNullHook);
+
+    // clear not ready error
+    setStatusErr(ErrorCode::NoErrors);
     
     r.setModificator(modify_resp);
-    r.setRequestModificator(modifyRequest);
+    r.setRequestModificator(modifyRequest);  
     r.start(ms_reading_timeout);
-  } catch (const std::exception &e) {
+  }
+  catch (const serial::IOException& e) {
+    if (debug_console == "0") {
+      if (e.getErrorNumber() == 0)
+      {
+        MessageBoxW(NULL, L"Ошибка открытия одного из com портов. Убедитесь что все они подключены, и другие программы не используют их", L"COM ERROR", MB_OK);
+      }
+      else {
+        std::string str = e.what();
+        std::wstring message = std::wstring(str.begin(), str.end());
+        MessageBoxW(NULL, message.c_str(), L"COM ERROR", MB_OK);
+      }
+    }
+    else {
+      printf("%s\n", e.what());
+      system("pause");
+    }
+  } 
+  catch (const std::exception& e) {
     if (debug_console == "0")
-        dprintf(msg<3>());
+      dprintf(msg<3>());
 
     printf("%s\n", e.what());
 
     if (debug_console != "0")
-        system("pause");
+      system("pause");
   }
-  setStatus(STATE_ERROR(STATE_L_RETRANSLATOR_ERROR));
+  setStatusErr(ErrorCode::ErrorNotStarted);
   can_exit = TRUE;
   return 0;
 }

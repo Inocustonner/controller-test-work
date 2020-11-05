@@ -4,14 +4,16 @@
 #include <thread>
 #include <chrono>
 int main() {
-  IRetranslator *ir = nullptr;
-  CoInitialize(nullptr);
-  HRESULT hr = CoCreateInstance(CLSID_RetranslatorAX, NULL, CLSCTX_INPROC_SERVER, IID_IRetranslator,
+  IRetranslatorComPort *ir = nullptr;
+  (CoInitialize(nullptr));
+  HRESULT hr = CoCreateInstance(CLSID_RetranslatorComPort, NULL, CLSCTX_INPROC_SERVER, IID_IRetranslatorComPort,
                                 reinterpret_cast<void **>(&ir));
   if (SUCCEEDED(hr)) {
-    long res;
-    ir->setCorr(50);
-    ir->Release();
+      long status;
+      ir->openPort(11, 9600, 8, &status);
+      BSTR array;
+      ir->read(8, &array);
+      ir->Release();
   }
   CoUninitialize();
   return 0;

@@ -1,3 +1,5 @@
+#include <RetranslatorDefs.hpp>
+
 #include "Retranslator.hpp"
 #include "Commands.hpp"
 #include "macro.hpp"
@@ -93,10 +95,7 @@ void try_open_port(serial::Serial &com, int com_id) {
     try {
       com.open();
       break;
-    } catch (const serial::IOException &) {
-#define STATUS_COM_ERROR 9030
-      setStatus(STATUS_COM_ERROR + com_id);
-    }
+    } catch (const serial::IOException &) {}
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
   }
 }
@@ -155,13 +154,19 @@ void Retranslator::start(int ms_timeout) {
       constexpr auto error_suddenly_port_closed = 0;
       int error_n = e.getErrorNumber();
       if (error_n == error_suddenly_port_closed) {
-        if (last_read_write == COM_Member::Srcp)
+        if (last_read_write == COM_Member::Srcp) {
+          setStatusErr(ErrorCode::ErrorRetranslatorEndPort);
           try_open_port(srcp, static_cast<int>(last_read_write));
-        else
+        }
+        else {          
+          setStatusErr(ErrorCode::ErrorRetranslatorWeightsPort);
           try_open_port(dstp, static_cast<int>(last_read_write));
+        }
       } else {
         std::rethrow_exception(std::current_exception());
       }
     }
+    // clear com errors
+    setStatusErr(ErrorCode::NoErrors);
   }
 }

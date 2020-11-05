@@ -45,7 +45,13 @@ HRESULT __stdcall Factory::CreateInstance(IUnknown *outer, const IID &iid,
     } else {
       return E_NOINTERFACE;
     }
-  }
+  } /*else if (m_clsid == CLSID_RetranslatorComPort) {
+    if (IS_EQ_IID(iid, IID_IRetranslatorComPort)) {
+      cretr = new (std::nothrow) RetranslatorComPort;
+    } else {
+      return E_NOINTERFACE;
+    }
+  }*/
 
   if (cretr == nullptr) {
     return E_OUTOFMEMORY;

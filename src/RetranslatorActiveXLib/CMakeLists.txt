@@ -8,6 +8,7 @@ add_library(retranslatorAX SHARED AXEntry.cpp
                           Registry.cpp
                           RetranslatorAX.cpp
 						  RetranslatorUtilsAX.cpp
+						  RetranslatorComPort.cpp
 						  
 						  PipeQueueSystem/PipeQueueSystem.cpp
 						  
