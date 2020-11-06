@@ -29,6 +29,8 @@ EXTERN_SHARED Status g_status;
 EXTERN_SHARED long g_minWeight;
 EXTERN_SHARED long g_corr;
 
+EXTERN_SHARED double g_reset_thr;
+
 RetranslatorAX::RetranslatorAX()
     : m_refCount(0),
       m_typeInfo(nullptr)
@@ -130,6 +132,12 @@ HRESULT __stdcall RetranslatorAX::getStab(long *f_stability) {
   else {
     *f_stability = -1;
   }
+  return S_OK;
+}
+
+HRESULT __stdcall RetranslatorAX::setResetThr(double *koef) {
+  g_reset_thr = *koef;
+  fireEvent(SetResetThr);
   return S_OK;
 }
 

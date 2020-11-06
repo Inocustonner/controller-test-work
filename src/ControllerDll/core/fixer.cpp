@@ -26,6 +26,7 @@ IMPORT_DLL void __stdcall setWeightFixed(long weight);
 
 IMPORT_DLL void __stdcall setStatusStability(bool stability);
 IMPORT_DLL void __stdcall setStatusAuth(bool auth);
+IMPORT_DLL double __stdcall getResetThrKoef();
 }
 
 void onSetCorr(long corr) {
@@ -33,7 +34,7 @@ void onSetCorr(long corr) {
     const double corr_koef = corr / 100.0;
     state.corr = [&min_w = state.min_weight,
                   corr_koef](comptype inp_w) -> comptype {
-      return static_cast<comptype>((inp_w - min_w) * corr_koef) + inp_w;
+      return (static_cast<comptype>((inp_w - min_w) * corr_koef) + inp_w);
     };
   } else {
     state.corr = [corr_w = corr](comptype inp_w) -> comptype {
@@ -46,7 +47,12 @@ void onSetMinWeight(long new_min_w) {
   state.min_weight = new_min_w;
   state.authorized = true;
 
-  reset_thr = state.min_weight / 2;
+  state.reset_thr = static_cast<comptype>(state.min_weight / reset_thr_koef);
+}
+
+void onSetResetThr(long) {
+  reset_thr_koef = getResetThrKoef();
+  state.reset_thr = static_cast<comptype>(state.min_weight / reset_thr_koef);
 }
 
 void onClearAuth(long) {
@@ -55,6 +61,9 @@ void onClearAuth(long) {
 
 inline comptype phase1(const comptype p1, const bool is_stable) {
   comptype corr_weight = state.corr(p1);
+
+  state.reset_thr = std::max(static_cast<comptype>(p1 / reset_thr_koef), state.reset_thr);
+
   state.passed_upper_gate = true;
   if (is_stable) {
     state.p0s = p1;
@@ -65,7 +74,7 @@ inline comptype phase1(const comptype p1, const bool is_stable) {
 static comptype delta = 200;
 
 inline void phase0(const comptype p1) {
-  if (state.p0 > reset_thr && reset_thr > p1 && state.passed_upper_gate) {
+  if (state.p0 > state.reset_thr && state.reset_thr > p1 && state.passed_upper_gate) {
     printf("resetting\n");
     if (get_log_lvl() > 1) {
       wchar_t buffer_msg[100] = {};
@@ -80,14 +89,16 @@ inline void phase0(const comptype p1) {
 
 comptype fix(const comptype p1, const bool is_stable) {
   comptype ret_value = p1;
-  if (get_log_lvl() > 0)
-    printf("Authorization: %s\n", state.authorized ? "true" : "false");
   if (state.authorized) {
     if (p1 < state.min_weight)
       phase0(p1);
     else
       ret_value = phase1(p1, is_stable);
   } 
+  if (get_log_lvl() > 0) {
+    printf("Authorization: %s\n", state.authorized ? "true" : "false");
+    printf("Reset thr: %d\n", state.reset_thr);
+  }
   state.p0 = p1;
 
   setWeight(p1);
@@ -96,7 +107,7 @@ comptype fix(const comptype p1, const bool is_stable) {
   setStatusAuth(state.authorized);
   setStatusStability(is_stable);
 
-  return ret_value;
+  return ret_value * rounding / rounding;
 }
 
 bool init_fixer(const inipp::Ini<char> &ini) {
@@ -104,6 +115,7 @@ bool init_fixer(const inipp::Ini<char> &ini) {
   setEventHook(SetMinimalWeight, onSetMinWeight);
   setEventHook(SetCorr, onSetCorr);
   setEventHook(ClearAuth, onClearAuth);
+  setEventHook(SetResetThr, onSetResetThr);
   fireEvent(SetCorr); // if corr was set before loading retranslator, update it here
   try {
     init_settings(ini);

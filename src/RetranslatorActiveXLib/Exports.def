@@ -17,3 +17,4 @@ EXPORTS
 	setStatusStability
 	setStatusAuth
 	clearStatus
+	getResetThrKoef

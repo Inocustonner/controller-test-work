@@ -34,7 +34,8 @@ library RetranslatorLib
     [id(31)] HRESULT getAuth([out, retval] long *f_auth);
     [id(32)] HRESULT getStab([out, retval] long *f_stability);
 
-    [id(33)] HRESULT clearAuth();
+    [id(33)] HRESULT setResetThr([in] double* koef);
+    [id(34)] HRESULT clearAuth();
   }
 
   [

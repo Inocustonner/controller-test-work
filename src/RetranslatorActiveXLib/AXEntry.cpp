@@ -9,7 +9,9 @@ HMODULE g_module = NULL;
 std::atomic_long g_objsInUse = 0;
 
 #define ALIGN32 alignas(32)
+#define ALIGN64 alignas(64)
 #define SHARED_VAR ALIGN32 volatile
+#define SHARED_VA64 ALIGN64 volatile
 
 #define STATE_0 (ErrorNotStarted << 2)
 
@@ -24,6 +26,7 @@ extern "C"
   SHARED_VAR long g_corr = 0;
 
   SHARED_VAR unsigned long created_process_pid = -1;
+  SHARED_VA64 double g_reset_thr = 2.5;
 }
 #pragma data_seg()
 
@@ -62,6 +65,9 @@ extern "C"
   void __stdcall clearStatus() {
     Status s = {};
     InterlockedSetStatus(&g_status, s);
+  }
+  double __stdcall getResetThrKoef() {
+    return g_reset_thr; // NOT INTERLOCKED
   }
 }
 

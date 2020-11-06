@@ -126,7 +126,7 @@ static void modify_resp(bytestring &bs) {
       int fixed = fix(weight, stable);
       printf("Extracted weight: %i[%s]\n", weight,
              stable ? "Stable" : "Unstable");
-      printf("Fixed: %i\n", fixed);
+      printf("Fixed: %i\n\n", fixed);
 
       // bcs weights use 6 bytes as with decimal in each, 2nd byte reserved for
       // '-'

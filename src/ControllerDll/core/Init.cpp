@@ -54,13 +54,16 @@ void inv_if(const std::map<KeyTM, ValTM>& map, KeyTt&& key, FuncT func)
 static void default_section(const Section_Map& default_map) noexcept
 {
 	inv_if(default_map, "reset_thr",
-		[](auto& pair_str){ reset_thr = std::stoi(pair_str->second); });
+		[](auto& pair_str){ reset_thr_koef = std::stod(pair_str->second); });
 
 	inv_if(default_map, "min_weight",
 		[](auto& pair_str) { default_min_weight = std::stoi(pair_str->second); });
 
 	inv_if(default_map, "message-duration",
 		[](auto& pair_str) { set_msg_duration(std::stoi(pair_str->second)); });
+
+	inv_if(default_map, "round",
+		[](auto& rnd) { rounding = std::stoi(rnd->second); });
 }
 
 const void init_settings(const inipp::Ini<char>& ini)

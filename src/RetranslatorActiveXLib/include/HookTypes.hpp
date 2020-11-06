@@ -5,6 +5,7 @@ enum EventType
   SetMinimalWeight = 0,
   SetCorr,
   SetNull,
+  SetResetThr,
   ClearAuth,
 	
   EventsCnt

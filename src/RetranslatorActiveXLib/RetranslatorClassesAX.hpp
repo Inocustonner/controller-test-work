@@ -28,6 +28,7 @@ public:
   HRESULT __stdcall getAuth(long *f_auth) override;
   HRESULT __stdcall getStab(long *f_stability) override;
 
+  HRESULT __stdcall setResetThr(double* koef) override;
   HRESULT __stdcall clearAuth() override;
   // these 2 methods are not declared in .idl, because they are intended to be
   // used by retranslator only void __stdcall setWeight(long weight) override;
