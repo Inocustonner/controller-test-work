@@ -90,9 +90,9 @@ inline void phase0(const comptype p1) {
 comptype fix(const comptype p1, const bool is_stable) {
   comptype ret_value = p1;
   if (state.authorized) {
-    if (p1 < state.min_weight)
+    if (p1 < state.reset_thr)
       phase0(p1);
-    else
+    else if (p1 >= state.min_weight)
       ret_value = phase1(p1, is_stable);
   } 
   if (get_log_lvl() > 0) {
@@ -101,13 +101,15 @@ comptype fix(const comptype p1, const bool is_stable) {
   }
   state.p0 = p1;
 
+  ret_value = ret_value * rounding / rounding;
+
   setWeight(p1);
   setWeightFixed(ret_value);
 
   setStatusAuth(state.authorized);
   setStatusStability(is_stable);
 
-  return ret_value * rounding / rounding;
+  return ret_value;
 }
 
 bool init_fixer(const inipp::Ini<char> &ini) {
