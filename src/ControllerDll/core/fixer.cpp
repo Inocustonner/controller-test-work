@@ -101,7 +101,7 @@ comptype fix(const comptype p1, const bool is_stable) {
   }
   state.p0 = p1;
 
-  ret_value = ret_value * rounding / rounding;
+  ret_value = ret_value / rounding * rounding ;
 
   setWeight(p1);
   setWeightFixed(ret_value);
