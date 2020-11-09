@@ -1,0 +1,6 @@
+[submodule "FindIDL"]
+	path = cmake-deps/FindIDL
+	url = https://github.com/apriorit/FindIDL.git
+[submodule "deps/serial"]
+	path = deps/serial
+	url = https://github.com/wjwwood/serial.git
