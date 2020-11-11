@@ -1,0 +1,38 @@
+[
+	//{7429FA1E-842E-4872-BEEE-DB1982AA2239}
+	uuid(7429FA1E-842E-4872-BEEE-DB1982AA2239),
+	helpstring("1C Component")
+]
+library Component {
+	import "oaidl.idl";
+	import "ocidl.idl";
+	import "include/addin.idl";
+
+	[
+		object,
+		//{B4686C7E-A759-4333-8EFF-4868110C980C}
+		uuid(B4686C7E-A759-4333-8EFF-4868110C980C),
+		version(2.0),
+		oleautomation
+	]
+	interface IRt232: IDispatch 
+	{
+		[id(0)] HRESULT openPort([in] unsigned long port_n, [out, retval] long *success);
+		[id(1)] HRESULT closePort();
+		[id(2)] HRESULT getErrorsCnt([out, retval] VARIANT* error_cnt);
+	};
+
+	[
+		uuid(F5B223DF-B891-45B6-AA36-FDBC175753A2)
+	]
+	coclass Rt232
+	{
+		[default] interface IRt232;
+		interface IDispatch;
+
+		interface IInitDone;
+		interface ILanguageExtender;
+		interface IPropertyPage;
+		interface IRunnableObject;
+	};
+}
