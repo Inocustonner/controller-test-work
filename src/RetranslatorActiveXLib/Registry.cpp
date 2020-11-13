@@ -102,6 +102,7 @@ const char *g_RegTable[][3] = {
 
 	{ "TypeLib\\" LIB_ID "\\" OBJECT_MAJOR_VERSION "." OBJECT_MINOR_VERSION "\\HELPDIR", 0, "" },
 	{ "TypeLib\\" LIB_ID "\\" OBJECT_MAJOR_VERSION "." OBJECT_MINOR_VERSION "\\9\\win32", 0, (const char*)-1 },
+	{ "TypeLib\\" LIB_ID "\\" OBJECT_MAJOR_VERSION "." OBJECT_MINOR_VERSION "\\9\\win64", 0, (const char*)-1 },
 };
 		
 // const char *g_RegTable[][3] = {

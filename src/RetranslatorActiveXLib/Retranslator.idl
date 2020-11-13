@@ -63,7 +63,12 @@ library RetranslatorLib
   {
       [id(10)] HRESULT run([in, string, ref] char* cmd);
       [id(11)] HRESULT runW([in, ref] VARIANT* cmd);
-      [id(20)] HRESULT setTimeout([in] unsigned long ms_timeout);
+      [id(12)] HRESULT setTimeout([in] unsigned long ms_timeout);
+
+      [id(13)] HRESULT startService([in, ref] VARIANT* serviceName, [out, retval] long *status);
+      [id(14)] HRESULT stopService([in, ref] VARIANT* serviceName, [out, retval] long* status);
+      [id(15)] HRESULT queryServiceStatus([in, ref] VARIANT* serviceName, [out, retval] long* status);
+
   }
 
   [

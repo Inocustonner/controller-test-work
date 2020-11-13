@@ -64,6 +64,10 @@ public:
   HRESULT __stdcall runW(VARIANT* cmd) override;
   HRESULT __stdcall setTimeout(unsigned long ms_timeout) override;
 
+  HRESULT __stdcall startService(VARIANT* serviceName, _Outref_ long* status) override;
+  HRESULT __stdcall stopService(VARIANT* serviceName, _Outref_ long* status) override;
+  HRESULT __stdcall queryServiceStatus(VARIANT* serviceName, _Outref_ long* status) override;
+
   HRESULT __stdcall GetTypeInfo(UINT it, LCID lcid, ITypeInfo **ppti) override;
   HRESULT __stdcall GetTypeInfoCount(UINT *pit) override;
   HRESULT __stdcall GetIDsOfNames(REFIID riid, OLECHAR **pNames, UINT cNames,

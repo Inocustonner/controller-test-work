@@ -70,6 +70,111 @@ HRESULT __stdcall RetranslatorUtilsAX::setTimeout(unsigned long ms_timeout) {
   return S_OK;
 }
 
+long openService(LPWSTR service_name, SC_HANDLE* manager, SC_HANDLE* service) {
+  *manager = OpenSCManager(NULL, NULL, SC_MANAGER_ALL_ACCESS);
+  if (!*manager) {
+    *service = nullptr;
+    return GetLastError();
+  }
+  *service = OpenServiceW(*manager, service_name, SERVICE_ALL_ACCESS);
+  if (!service) {
+    CloseServiceHandle(*manager);
+    *manager = nullptr;
+    return GetLastError();
+  }
+  return 0;
+}
+
+#define INIT_OPEN_SERVICE \
+  SC_HANDLE manager = NULL, service = NULL; \
+  *status = openService(V_BSTR(serviceName), &manager, &service); \
+  if (*status != 0) return S_OK
+
+HRESULT __stdcall RetranslatorUtilsAX::startService(VARIANT* serviceName, _Outref_ long* status) {
+  INIT_OPEN_SERVICE;
+  SERVICE_STATUS_PROCESS ssp;
+  DWORD _;
+  if (!QueryServiceStatusEx(service, SC_STATUS_PROCESS_INFO, (LPBYTE)&ssp, sizeof(ssp), &_)) {
+    goto exit;
+  }
+  if (ssp.dwCurrentState == SERVICE_RUNNING || ssp.dwCurrentState == SERVICE_START_PENDING) {
+    goto exit;
+  }
+  if (!ChangeServiceConfigW(
+    service,        // handle of service 
+    SERVICE_NO_CHANGE, // service type: no change 
+    SERVICE_DEMAND_START,  // service start type 
+    SERVICE_NO_CHANGE, // error control: no change 
+    NULL,              // binary path: no change 
+    NULL,              // load order group: no change 
+    NULL,              // tag ID: no change 
+    NULL,              // dependencies: no change 
+    NULL,              // account name: no change 
+    NULL,              // password: no change 
+    NULL))            // display name: no change
+  {
+    goto exit;
+  }
+  StartServiceW(service, 0, NULL);
+exit:
+  *status = GetLastError();
+  CloseServiceHandle(service);
+  CloseServiceHandle(manager);
+  return S_OK;
+}
+
+HRESULT __stdcall RetranslatorUtilsAX::stopService(VARIANT* serviceName, _Outref_ long* status) {
+  INIT_OPEN_SERVICE;
+  SERVICE_STATUS_PROCESS ssp;
+  DWORD _;
+  if (!QueryServiceStatusEx(service, SC_STATUS_PROCESS_INFO, (LPBYTE)&ssp, sizeof(ssp), &_)) {
+    goto exit;
+  }
+  if (ssp.dwCurrentState == SERVICE_STOP || ssp.dwCurrentState == SERVICE_STOP_PENDING) {
+    goto exit;
+  }
+  if (!ChangeServiceConfigW(
+    service,        // handle of service 
+    SERVICE_NO_CHANGE, // service type: no change 
+    SERVICE_DISABLED,  // service start type 
+    SERVICE_NO_CHANGE, // error control: no change 
+    NULL,              // binary path: no change 
+    NULL,              // load order group: no change 
+    NULL,              // tag ID: no change 
+    NULL,              // dependencies: no change 
+    NULL,              // account name: no change 
+    NULL,              // password: no change 
+    NULL))            // display name: no change
+  {
+    goto exit;
+  }
+  // assume there is no dependent services :)
+  ControlService(service, SERVICE_CONTROL_STOP, (LPSERVICE_STATUS)&ssp);
+exit:
+  *status = GetLastError();
+  CloseServiceHandle(service);
+  CloseServiceHandle(manager);
+  return S_OK;
+}
+
+HRESULT __stdcall RetranslatorUtilsAX::queryServiceStatus(VARIANT* serviceName, _Outref_ long* status) {
+  INIT_OPEN_SERVICE;
+  SERVICE_STATUS_PROCESS ssp;
+  DWORD _;
+  if (!QueryServiceStatusEx(service, SC_STATUS_PROCESS_INFO, (LPBYTE)&ssp, sizeof(ssp), &_)) {
+    *status = -GetLastError();
+    CloseServiceHandle(service);
+    CloseServiceHandle(manager);
+    return S_OK;
+  }
+  else {
+    *status = ssp.dwCurrentState;
+    CloseServiceHandle(service);
+    CloseServiceHandle(manager);
+    return S_OK;
+  }
+}
+
 HRESULT __stdcall RetranslatorUtilsAX::QueryInterface(REFIID riid, void **ppv) {
   if (ppv == nullptr)
     return E_INVALIDARG;
