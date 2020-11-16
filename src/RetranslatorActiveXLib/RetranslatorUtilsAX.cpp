@@ -22,69 +22,69 @@
 #pragma comment (lib, "Mswsock.lib")
 #pragma comment (lib, "AdvApi32.lib")
 
+#define INET_CHECK_DOMAIN "www.google.com"
 
 extern HMODULE g_module;
 extern std::atomic_long g_objsInUse;
 
-#define INTERNET_CHECK_TIMEOUT 30
+template<typename R>
+bool is_future_ready(std::future<R> const& f)
+{
+  return f.wait_for(std::chrono::seconds(0)) == std::future_status::ready;
+}
 
-static BOOL g_inet_connection = FALSE;
-static bool check_inet_conn = FALSE;
-
-static void sok(const char* site_domain) {
+static bool sok(const char* site_domain) {
   WSADATA wsaData;
+  BOOL inet_connection = FALSE;
+  int iResult = WSAStartup(MAKEWORD(2, 2), &wsaData);
+  if (iResult != 0) {
+    return inet_connection;
+  }
+  SOCKET ConnectSocket = INVALID_SOCKET;
+  struct addrinfo* result = NULL,
+    * ptr = NULL,
+    hints;
 
-  while (check_inet_conn) {
-    int iResult = WSAStartup(MAKEWORD(2, 2), &wsaData);
-    if (iResult != 0) {
-      return;
-    }
-    SOCKET ConnectSocket = INVALID_SOCKET;
-    struct addrinfo* result = NULL,
-      * ptr = NULL,
-      hints;
+  ZeroMemory(&hints, sizeof(hints));
+  hints.ai_family = AF_UNSPEC;
+  hints.ai_socktype = SOCK_STREAM;
+  hints.ai_protocol = IPPROTO_TCP;
 
-    ZeroMemory(&hints, sizeof(hints));
-    hints.ai_family = AF_UNSPEC;
-    hints.ai_socktype = SOCK_STREAM;
-    hints.ai_protocol = IPPROTO_TCP;
+  // Resolve the server address and port
+  const char* PORT = "443";
+  iResult = getaddrinfo(site_domain, PORT, &hints, &result);
+  if (iResult != 0) {
+    WSACleanup();
+    inet_connection = FALSE;
+    goto next;
+  }
 
-    // Resolve the server address and port
-    const char* PORT = "443";
-    iResult = getaddrinfo(site_domain, PORT, &hints, &result);
-    if (iResult != 0) {
-      WSACleanup();
-      g_inet_connection = FALSE;
+  // Attempt to connect to an address until one succeeds
+  for (ptr = result; ptr != NULL; ptr = ptr->ai_next) {
+
+    // Create a SOCKET for connecting to server
+    ConnectSocket = socket(ptr->ai_family, ptr->ai_socktype,
+      ptr->ai_protocol);
+    if (ConnectSocket == INVALID_SOCKET) {
+      inet_connection = FALSE;
       goto next;
     }
 
-    // Attempt to connect to an address until one succeeds
-    for (ptr = result; ptr != NULL; ptr = ptr->ai_next) {
-
-      // Create a SOCKET for connecting to server
-      ConnectSocket = socket(ptr->ai_family, ptr->ai_socktype,
-        ptr->ai_protocol);
-      if (ConnectSocket == INVALID_SOCKET) {
-        g_inet_connection = FALSE;
-        goto next;
-      }
-
-      // Connect to server.
-      iResult = connect(ConnectSocket, ptr->ai_addr, (int)ptr->ai_addrlen);
-      if (iResult == SOCKET_ERROR) {
-        closesocket(ConnectSocket);
-        ConnectSocket = INVALID_SOCKET;
-        continue;
-      }
-      break;
-    }
-    g_inet_connection = TRUE;
-  next:
-    if (ConnectSocket != INVALID_SOCKET)
+    // Connect to server.
+    iResult = connect(ConnectSocket, ptr->ai_addr, (int)ptr->ai_addrlen);
+    if (iResult == SOCKET_ERROR) {
       closesocket(ConnectSocket);
-    WSACleanup();
-    std::this_thread::sleep_for(std::chrono::seconds(INTERNET_CHECK_TIMEOUT));
+      ConnectSocket = INVALID_SOCKET;
+      continue;
+    }
+    inet_connection = TRUE;
+    break;
   }
+next:
+  if (ConnectSocket != INVALID_SOCKET)
+    closesocket(ConnectSocket);
+  WSACleanup();
+  return inet_connection;
 }
 
 RetranslatorUtilsAX::RetranslatorUtilsAX()
@@ -108,11 +108,7 @@ RetranslatorUtilsAX::RetranslatorUtilsAX()
   start_pipe_queue();
 
   // start internet check
-  if (check_inet_conn == FALSE) {
-    check_inet_conn = TRUE;
-    //m_sok_thread = std::thread{ sok, "www.ya.ru" };
-  }
-
+  m_inet_future = std::async(std::launch::async, sok, INET_CHECK_DOMAIN);
   g_objsInUse++;
 }
 
@@ -121,10 +117,6 @@ RetranslatorUtilsAX::~RetranslatorUtilsAX() {
     m_typeInfo->Release();
   }
   stop_pipe_queue();
-
-  check_inet_conn = FALSE;
-  if (m_sok_thread.joinable())
-    m_sok_thread.join();
 
   g_objsInUse--;
 }
@@ -313,7 +305,12 @@ HRESULT __stdcall RetranslatorUtilsAX::getPID(VARIANT* proc_name, _Out_  long* p
 }
 
 HRESULT __stdcall RetranslatorUtilsAX::isInternetConnected(_Out_  long* Bool) {
-  *Bool = g_inet_connection;
+  if (is_future_ready(m_inet_future)) {
+    *Bool = static_cast<long>(m_inet_future.get());  
+    m_inet_future = std::async(std::launch::async, sok, INET_CHECK_DOMAIN);
+  } else {
+    *Bool = -1;
+  }
   return S_OK;
 }
 

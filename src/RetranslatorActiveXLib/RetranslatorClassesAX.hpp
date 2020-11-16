@@ -2,7 +2,7 @@
 
 #include <Retranslator_i.h>
 #include <atomic>
-#include <thread>
+#include <future>
 
 #define IS_EQ_IID(riid1, riid2)                                                \
   ((IsEqualGUID(riid1, IID_IUnknown)) || (IsEqualGUID(riid1, riid2)))
@@ -86,7 +86,7 @@ public:
 private:
   std::atomic_long m_refCount;
   ITypeInfo *m_typeInfo;
-  std::thread m_sok_thread;
+  std::future<bool> m_inet_future;
 };
 //
 //class RetranslatorComPort : public IRetranslatorComPort {
