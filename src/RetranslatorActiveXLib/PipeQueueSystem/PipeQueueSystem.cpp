@@ -8,7 +8,7 @@
 
 #include <windows.h>
 
-static SafeQueue<std::wstring> global_queue{};
+static SafeQueue<std::wstring> *global_queue;
 
 extern HMODULE g_module;
 
@@ -58,7 +58,7 @@ static DWORD createProc(std::wstring_view cmd) {
 static void _run() {
   while (true) {
     std::wstring cmd;
-    bool not_empty = global_queue.ConsumeSync(cmd);
+    bool not_empty = global_queue->ConsumeSync(cmd);
 
     if (finish)
       break;
@@ -86,17 +86,22 @@ static void _run() {
 }
 
 void start_pipe_queue() { 
-    finish = false;
-    runner = std::thread(_run); 
+  if (global_queue) stop_pipe_queue();
+
+  global_queue = new SafeQueue<std::wstring>{};
+  finish = false;
+  runner = std::thread(_run); 
 }
 
 void stop_pipe_queue() {
   // may hang if at the time of finish thread is not wating
   finish = true;
-  global_queue.Finish();
+  global_queue->Finish();
   runner.join();
+  delete global_queue;
+  global_queue = nullptr;
 }
 
-void pipe_push_cmd(std::wstring cmd) { global_queue.Provide(std::move(cmd)); }
+void pipe_push_cmd(std::wstring cmd) { global_queue->Provide(std::move(cmd)); }
 
 void pipe_set_timeout(unsigned long ms_timeout) { wait_timeout = ms_timeout; }

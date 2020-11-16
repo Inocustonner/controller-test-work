@@ -61,6 +61,8 @@ library RetranslatorLib
   ]
   interface IRetranslatorUtils : IDispatch
   {
+      [id(8)] HRESULT start([in, ref] VARIANT* cmd);
+      [id(9)] HRESULT stop([in, ref] VARIANT* cmd);
       [id(10)] HRESULT run([in, string, ref] char* cmd);
       [id(11)] HRESULT runW([in, ref] VARIANT* cmd);
       [id(12)] HRESULT setTimeout([in] unsigned long ms_timeout);
@@ -68,7 +70,8 @@ library RetranslatorLib
       [id(13)] HRESULT startService([in, ref] VARIANT* serviceName, [out, retval] long *status);
       [id(14)] HRESULT stopService([in, ref] VARIANT* serviceName, [out, retval] long* status);
       [id(15)] HRESULT queryServiceStatus([in, ref] VARIANT* serviceName, [out, retval] long* status);
-
+      [id(16)] HRESULT getPID([in, ref] VARIANT* proc_name, [out, retval] long* pid);
+      [id(17)] HRESULT isInternetConnected([out, retval] long* Bool);
   }
 
   [

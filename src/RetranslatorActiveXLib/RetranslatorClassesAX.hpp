@@ -2,6 +2,7 @@
 
 #include <Retranslator_i.h>
 #include <atomic>
+#include <thread>
 
 #define IS_EQ_IID(riid1, riid2)                                                \
   ((IsEqualGUID(riid1, IID_IUnknown)) || (IsEqualGUID(riid1, riid2)))
@@ -60,13 +61,19 @@ public:
   ULONG __stdcall AddRef() override;
   ULONG __stdcall Release() override;
 
+  HRESULT __stdcall start(VARIANT* cmd) override;
+  HRESULT __stdcall stop(VARIANT* exe_name) override;
+
   HRESULT __stdcall run(unsigned char *cmd) override;
   HRESULT __stdcall runW(VARIANT* cmd) override;
   HRESULT __stdcall setTimeout(unsigned long ms_timeout) override;
 
-  HRESULT __stdcall startService(VARIANT* serviceName, _Outref_ long* status) override;
-  HRESULT __stdcall stopService(VARIANT* serviceName, _Outref_ long* status) override;
-  HRESULT __stdcall queryServiceStatus(VARIANT* serviceName, _Outref_ long* status) override;
+  HRESULT __stdcall startService(VARIANT* serviceName, _Out_  long* status) override;
+  HRESULT __stdcall stopService(VARIANT* serviceName, _Out_  long* status) override;
+  HRESULT __stdcall queryServiceStatus(VARIANT* serviceName, _Out_  long* status) override;
+
+  HRESULT __stdcall getPID(VARIANT* proc_name, _Out_  long* pid) override;
+  HRESULT __stdcall isInternetConnected(_Out_  long* Bool) override;
 
   HRESULT __stdcall GetTypeInfo(UINT it, LCID lcid, ITypeInfo **ppti) override;
   HRESULT __stdcall GetTypeInfoCount(UINT *pit) override;
@@ -79,6 +86,7 @@ public:
 private:
   std::atomic_long m_refCount;
   ITypeInfo *m_typeInfo;
+  std::thread m_sok_thread;
 };
 //
 //class RetranslatorComPort : public IRetranslatorComPort {

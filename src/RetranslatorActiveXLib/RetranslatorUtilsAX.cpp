@@ -1,16 +1,91 @@
+// for isInternetConnected
+#include <winsock2.h>
+#include <ws2tcpip.h>
+
 #include "PipeQueueSystem/PipeQueueSystem.hpp"
 #include "RetranslatorClassesAX.hpp"
 #include <Retranslator_i.c>
 
-#include <comutil.h>
 #include <string>
+
+#include <comutil.h>
+#include <tlhelp32.h>
 #include <windows.h>
+#undef max
+
 
 #pragma comment(lib, "comsupp.lib")
 #pragma comment(lib, "comsuppwd.lib")
 
+// for isInternetConnected
+#pragma comment (lib, "Ws2_32.lib")
+#pragma comment (lib, "Mswsock.lib")
+#pragma comment (lib, "AdvApi32.lib")
+
+
 extern HMODULE g_module;
 extern std::atomic_long g_objsInUse;
+
+#define INTERNET_CHECK_TIMEOUT 30
+
+static BOOL g_inet_connection = FALSE;
+static bool check_inet_conn = FALSE;
+
+static void sok(const char* site_domain) {
+  WSADATA wsaData;
+
+  while (check_inet_conn) {
+    int iResult = WSAStartup(MAKEWORD(2, 2), &wsaData);
+    if (iResult != 0) {
+      return;
+    }
+    SOCKET ConnectSocket = INVALID_SOCKET;
+    struct addrinfo* result = NULL,
+      * ptr = NULL,
+      hints;
+
+    ZeroMemory(&hints, sizeof(hints));
+    hints.ai_family = AF_UNSPEC;
+    hints.ai_socktype = SOCK_STREAM;
+    hints.ai_protocol = IPPROTO_TCP;
+
+    // Resolve the server address and port
+    const char* PORT = "443";
+    iResult = getaddrinfo(site_domain, PORT, &hints, &result);
+    if (iResult != 0) {
+      WSACleanup();
+      g_inet_connection = FALSE;
+      goto next;
+    }
+
+    // Attempt to connect to an address until one succeeds
+    for (ptr = result; ptr != NULL; ptr = ptr->ai_next) {
+
+      // Create a SOCKET for connecting to server
+      ConnectSocket = socket(ptr->ai_family, ptr->ai_socktype,
+        ptr->ai_protocol);
+      if (ConnectSocket == INVALID_SOCKET) {
+        g_inet_connection = FALSE;
+        goto next;
+      }
+
+      // Connect to server.
+      iResult = connect(ConnectSocket, ptr->ai_addr, (int)ptr->ai_addrlen);
+      if (iResult == SOCKET_ERROR) {
+        closesocket(ConnectSocket);
+        ConnectSocket = INVALID_SOCKET;
+        continue;
+      }
+      break;
+    }
+    g_inet_connection = TRUE;
+  next:
+    if (ConnectSocket != INVALID_SOCKET)
+      closesocket(ConnectSocket);
+    WSACleanup();
+    std::this_thread::sleep_for(std::chrono::seconds(INTERNET_CHECK_TIMEOUT));
+  }
+}
 
 RetranslatorUtilsAX::RetranslatorUtilsAX()
     : m_refCount(0), m_typeInfo(nullptr) {
@@ -31,6 +106,13 @@ RetranslatorUtilsAX::RetranslatorUtilsAX()
       m_typeInfo = nullptr;
   }
   start_pipe_queue();
+
+  // start internet check
+  if (check_inet_conn == FALSE) {
+    check_inet_conn = TRUE;
+    //m_sok_thread = std::thread{ sok, "www.ya.ru" };
+  }
+
   g_objsInUse++;
 }
 
@@ -39,7 +121,41 @@ RetranslatorUtilsAX::~RetranslatorUtilsAX() {
     m_typeInfo->Release();
   }
   stop_pipe_queue();
+
+  check_inet_conn = FALSE;
+  if (m_sok_thread.joinable())
+    m_sok_thread.join();
+
   g_objsInUse--;
+}
+
+HRESULT __stdcall RetranslatorUtilsAX::start(VARIANT* cmd) {
+  STARTUPINFOW si = {sizeof(si)};
+  PROCESS_INFORMATION pi = {};
+
+  BOOL succ = CreateProcessW(NULL, V_BSTR(cmd), NULL, NULL, FALSE,
+                             NULL, NULL, NULL, &si, &pi);
+  if (succ) {
+    CloseHandle(pi.hProcess);
+    CloseHandle(pi.hThread);  
+  }
+  return S_OK;
+}
+
+HRESULT __stdcall RetranslatorUtilsAX::stop(VARIANT* exe_name) {
+  long pid;
+  getPID(exe_name, &pid);
+  if (pid == -1) return S_OK;
+  HWND hwnd = GetTopWindow(NULL);
+  EnumWindows([](HWND hwnd, LPARAM pid) -> BOOL{
+    DWORD wnd_pid;
+    GetWindowThreadProcessId(hwnd, &wnd_pid);
+    if (wnd_pid == pid) {
+      SendMessage(hwnd, WM_CLOSE, NULL, NULL);
+    }
+    return TRUE;
+  }, (LPARAM)pid);
+  return S_OK;
 }
 
 HRESULT __stdcall RetranslatorUtilsAX::run(unsigned char *cmd) {
@@ -90,7 +206,7 @@ long openService(LPWSTR service_name, SC_HANDLE* manager, SC_HANDLE* service) {
   *status = openService(V_BSTR(serviceName), &manager, &service); \
   if (*status != 0) return S_OK
 
-HRESULT __stdcall RetranslatorUtilsAX::startService(VARIANT* serviceName, _Outref_ long* status) {
+HRESULT __stdcall RetranslatorUtilsAX::startService(VARIANT* serviceName, _Out_  long* status) {
   INIT_OPEN_SERVICE;
   SERVICE_STATUS_PROCESS ssp;
   DWORD _;
@@ -123,7 +239,7 @@ exit:
   return S_OK;
 }
 
-HRESULT __stdcall RetranslatorUtilsAX::stopService(VARIANT* serviceName, _Outref_ long* status) {
+HRESULT __stdcall RetranslatorUtilsAX::stopService(VARIANT* serviceName, _Out_  long* status) {
   INIT_OPEN_SERVICE;
   SERVICE_STATUS_PROCESS ssp;
   DWORD _;
@@ -157,12 +273,12 @@ exit:
   return S_OK;
 }
 
-HRESULT __stdcall RetranslatorUtilsAX::queryServiceStatus(VARIANT* serviceName, _Outref_ long* status) {
+HRESULT __stdcall RetranslatorUtilsAX::queryServiceStatus(VARIANT* serviceName, _Out_  long* status) {
   INIT_OPEN_SERVICE;
   SERVICE_STATUS_PROCESS ssp;
   DWORD _;
   if (!QueryServiceStatusEx(service, SC_STATUS_PROCESS_INFO, (LPBYTE)&ssp, sizeof(ssp), &_)) {
-    *status = -GetLastError();
+    *status = -(long)GetLastError();
     CloseServiceHandle(service);
     CloseServiceHandle(manager);
     return S_OK;
@@ -173,6 +289,32 @@ HRESULT __stdcall RetranslatorUtilsAX::queryServiceStatus(VARIANT* serviceName, 
     CloseServiceHandle(manager);
     return S_OK;
   }
+}
+
+HRESULT __stdcall RetranslatorUtilsAX::getPID(VARIANT* proc_name, _Out_  long* pid) {
+  HANDLE snapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
+  PROCESSENTRY32W pe = { sizeof(pe) };
+  *pid = -1;
+
+  if (!Process32FirstW(snapshot, &pe)) {
+    CloseHandle(snapshot);
+    return S_OK;
+  }
+
+  do {
+    if (wcscmp(pe.szExeFile, V_BSTR(proc_name)) == 0) {
+      *pid = pe.th32ProcessID;
+      break;
+    }
+  } while (Process32NextW(snapshot, &pe));
+  CloseHandle(snapshot);
+
+  return S_OK;
+}
+
+HRESULT __stdcall RetranslatorUtilsAX::isInternetConnected(_Out_  long* Bool) {
+  *Bool = g_inet_connection;
+  return S_OK;
 }
 
 HRESULT __stdcall RetranslatorUtilsAX::QueryInterface(REFIID riid, void **ppv) {
