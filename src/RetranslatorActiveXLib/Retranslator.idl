@@ -61,6 +61,7 @@ library RetranslatorLib
   ]
   interface IRetranslatorUtils : IDispatch
   {
+      [id(7)] HRESULT enableLogging([in, ref] VARIANT* file_path);
       [id(8)] HRESULT start([in, ref] VARIANT* cmd);
       [id(9)] HRESULT stop([in, ref] VARIANT* cmd);
       [id(10)] HRESULT run([in, string, ref] char* cmd);

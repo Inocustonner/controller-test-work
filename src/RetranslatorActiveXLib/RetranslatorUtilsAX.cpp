@@ -105,7 +105,7 @@ RetranslatorUtilsAX::RetranslatorUtilsAX()
     if (FAILED(hr))
       m_typeInfo = nullptr;
   }
-  start_pipe_queue();
+  start_pipe_queue(logger_enabled, logger);
 
   // start internet check
   m_inet_future = std::async(std::launch::async, sok, INET_CHECK_DOMAIN);
@@ -121,21 +121,47 @@ RetranslatorUtilsAX::~RetranslatorUtilsAX() {
   g_objsInUse--;
 }
 
+void RetranslatorUtilsAX::log(const char* format, ...) {
+  if (logger_enabled) {
+    va_list args;
+    va_start(args, format);
+
+    int buf_size = vsnprintf(nullptr, 0, format, args);
+
+    std::string line;
+    line.resize(buf_size, 0);
+    vsnprintf(line.data(), line.size() + 1, format, args);
+
+    logger.log(line);
+    va_end(args);
+  }
+}
+
+HRESULT __stdcall RetranslatorUtilsAX::enableLogging(_In_ VARIANT* file_path) {
+  logger_enabled = true;
+  logger = SLogger(V_BSTR(file_path));
+  return S_OK;
+}
+
 HRESULT __stdcall RetranslatorUtilsAX::start(VARIANT* cmd) {
   STARTUPINFOW si = {sizeof(si)};
   PROCESS_INFORMATION pi = {};
-
   BOOL succ = CreateProcessW(NULL, V_BSTR(cmd), NULL, NULL, FALSE,
                              NULL, NULL, NULL, &si, &pi);
   if (succ) {
+    log("SUCCESS: Start command %ls", V_BSTR(cmd));
     CloseHandle(pi.hProcess);
     CloseHandle(pi.hThread);  
+  }
+  else {
+    log("ERROR: Start command %ls", V_BSTR(cmd));
   }
   return S_OK;
 }
 
 HRESULT __stdcall RetranslatorUtilsAX::stop(VARIANT* exe_name) {
   long pid;
+  log("Stopping %ls", V_BSTR(exe_name));
   getPID(exe_name, &pid);
   if (pid == -1) return S_OK;
   HWND hwnd = GetTopWindow(NULL);
@@ -174,6 +200,7 @@ HRESULT __stdcall RetranslatorUtilsAX::runW(VARIANT* cmd) {
 
 
 HRESULT __stdcall RetranslatorUtilsAX::setTimeout(unsigned long ms_timeout) {
+  log("Set timeout %d ms", ms_timeout);
   pipe_set_timeout(ms_timeout);
   return S_OK;
 }

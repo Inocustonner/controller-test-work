@@ -16,7 +16,7 @@ add_library(retranslatorAX SHARED AXEntry.cpp
                           Hook.cpp
                           )
                           
-target_link_libraries(retranslatorAX PUBLIC RetranslatorIDL)
+target_link_libraries(retranslatorAX PUBLIC RetranslatorIDL slogger)
 set_target_properties(retranslatorAX
    PROPERTIES
    ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_ARCHIVE_OUTPUT_DIRECTORY}/retranslatorAX"
@@ -34,11 +34,11 @@ add_custom_command(TARGET retranslatorAX
    COMMAND ${CMAKE_COMMAND} -E copy ARGS ${CMAKE_CURRENT_BINARY_DIR}/Generated/Retranslator.tlb ${CMAKE_ARCHIVE_OUTPUT_DIRECTORY}/retranslatorAX/$<CONFIG>/Retranslator.tlb
    VERBATIM)
 
-add_executable(retranslatorAXTestCOM test/test.cpp)
-target_link_libraries(retranslatorAXTestCOM PUBLIC RetranslatorIDL)
-set_target_properties(retranslatorAXTestCOM
-   PROPERTIES
-   ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_ARCHIVE_OUTPUT_DIRECTORY}/retranslatorAX"
-   LIBRARY_OUTPUT_DIRECTORY "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/retranslatorAX"
-   RUNTIME_OUTPUT_DIRECTORY "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/retranslatorAX"
-   )
+# add_executable(retranslatorAXTestCOM test/test.cpp)
+# target_link_libraries(retranslatorAXTestCOM PUBLIC RetranslatorIDL)
+# set_target_properties(retranslatorAXTestCOM
+   # PROPERTIES
+   # ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_ARCHIVE_OUTPUT_DIRECTORY}/retranslatorAX"
+   # LIBRARY_OUTPUT_DIRECTORY "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/retranslatorAX"
+   # RUNTIME_OUTPUT_DIRECTORY "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/retranslatorAX"
+   # )

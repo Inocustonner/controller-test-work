@@ -3,18 +3,20 @@
 #include "Retranslator.hpp"
 #include "macro.hpp"
 
-#include <mmsg.hpp>
 #include <Encode.hpp>
 #include <Error.hpp>
 #include <HookTypes.hpp>
 #include <RetranslatorDefs.hpp>
+#include <mmsg.hpp>
+
+#include <SLogger.hpp>
 
 #include <algorithm>
+#include <atomic>
 #include <chrono>
+#include <filesystem>
 #include <iostream>
 #include <string_view>
-
-#include <atomic>
 
 #include <Windows.h>
 
@@ -37,6 +39,10 @@ IMPORT_DLL void __stdcall setStatusErr(long status);
 IMPORT_DLL void setEventHook(EventType event, SetHook *onSet);
 }
 
+static SLogger logger;
+static bool enable_txt_logging = false;
+
+
 BOOL WINAPI CtrlHandler(DWORD signal) {
   if (signal == CTRL_C_EVENT) {
     printf("Closing retranslator...n");
@@ -49,11 +55,15 @@ BOOL WINAPI CtrlHandler(DWORD signal) {
     return FALSE;
 }
 
-static void setNullHook(long) { add_set_null_cmd = true; }
+static void setNullHook(long) {
+  log("SetNullHook fired");
+  add_set_null_cmd = true;
+}
 
 static void modifyRequest(bytestring &bs) {
   if (add_set_null_cmd) {
     add_set_null_cmd = false;
+    log("Adding set NULL command");
     bs.push_back(0x0D);
   }
 }
@@ -100,6 +110,7 @@ inline int extract_weight(size_t ans_start_pos, const bytestring_view bsv) {
 // if prev_weight > || < curr_weight on 1000
 // decline new weight
 static void modify_resp(bytestring &bs) {
+  static std::string prev_invalid = ""; // used at the end
   if (bs.size() >= 9) { // when weight is returned, bs size == 9, if it's bigger
                         // there is some litter
     // valid weight response have the following scheme
@@ -127,6 +138,16 @@ static void modify_resp(bytestring &bs) {
       printf("Extracted weight: %i[%s]\n", weight,
              stable ? "Stable" : "Unstable");
       printf("Fixed: %i\n\n", fixed);
+      
+      constexpr int last_stable_default = -1000;
+      static int last_stable_fixed = last_stable_default;
+      if (stable && last_stable_fixed == last_stable_default) {
+        last_stable_fixed = fixed;
+        log("Fixed %d", last_stable_fixed);
+      } else if (weight < 1000) {
+        last_stable_fixed = last_stable_default;
+      }
+
 
       // bcs weights use 6 bytes as with decimal in each, 2nd byte reserved for
       // '-'
@@ -146,10 +167,34 @@ static void modify_resp(bytestring &bs) {
       }
       lastWeight = weight;
       setStatusErr(ErrorCode::NoErrors);
+      
+      prev_invalid = "";
       return;
     }
   }
+  std::string invalid_bytes = "";
+  std::string invalid_bytes_numbers = "";
+  for (auto bt : bs) {
+    invalid_bytes += (char)bt;
+  }
+  if (prev_invalid != invalid_bytes) {
+    log("Invalid bytes (%s)", invalid_bytes.c_str());
+    prev_invalid = invalid_bytes;
+  }
   setStatusErr(ErrorCode::ErrorInvalidData);
+}
+
+void initLogs(const std::string &logs_dir) {
+  // create log directory, if needed
+  char file_name[64] = {};
+
+  const std::time_t now = std::time(nullptr);
+  tm t;
+  localtime_s(&t, &now);
+
+  const char *format = "%Y_%m_%d %H_%M_%S Retranslator_log.txt";
+  std::strftime(file_name, sizeof(file_name), format, &t);
+  logger = SLogger(logs_dir + "\\" + file_name);
 }
 
 int main() {
@@ -191,7 +236,8 @@ int main() {
   }
   fclose(fp);
 
-  ini.parse(std::stringstream(ss));
+  auto str_ss = std::stringstream(ss);
+  ini.parse(str_ss);
 
   if (!SetConsoleCtrlHandler(CtrlHandler, TRUE)) {
     printf("Unnable to set console handler\n");
@@ -200,12 +246,21 @@ int main() {
   }
 
   init_fixer(ini);
-  
-  setStatusErr(ErrorCode::ErrorNotReady);
-  
-  // start retranslator
+
   const std::string debug_console = ini.sections["DEBUG"]["LogLevel"];
   set_log_lvl(std::stoi(debug_console));
+  setStatusErr(ErrorCode::ErrorNotReady);
+
+  int log_lvl = get_log_lvl();
+  if (log_lvl < 0 || log_lvl >= 2) {
+    enable_txt_logging = true;
+
+    const std::string logs_dir = current_dir + "\\logs";
+    initLogs(logs_dir);
+    log("Retranslator initing");
+  }
+
+  // start retranslator
   try {
     if (debug_console == "0") {
       ::ShowWindow(::GetConsoleWindow(), SW_HIDE);
@@ -232,32 +287,40 @@ int main() {
 
     // clear not ready error
     setStatusErr(ErrorCode::NoErrors);
-    
+    log("debug_lvl=%s", debug_console.c_str());
+    log("src_port=%s", src_port.c_str());
+    log("dst_port=%s", dst_port.c_str());
+    log("ms_reading_timeout=%d ms", ms_reading_timeout);
+    log("timeSpanForStability=%lli ms", timeSpanForStability.count());
+    log("weight_delta_for_stability=%d kg", weight_delta_for_stability);
+    log("Retranslator started. No errors");
+
     r.setModificator(modify_resp);
-    r.setRequestModificator(modifyRequest);  
+    r.setRequestModificator(modifyRequest);
     r.start(ms_reading_timeout);
-  }
-  catch (const serial::IOException& e) {
+  } catch (const serial::IOException &e) {
     if (debug_console == "0") {
-      if (e.getErrorNumber() == 0)
-      {
-        MessageBoxW(NULL, L"Ошибка открытия одного из com портов. Убедитесь что все они подключены, и другие программы не используют их", L"COM ERROR", MB_OK);
-      }
-      else {
+      if (e.getErrorNumber() == 0) {
+        MessageBoxW(NULL,
+                    L"                          com       .                    "
+                    L"             ,                                    ",
+                    L"COM ERROR", MB_OK);
+      } else {
         std::string str = e.what();
         std::wstring message = std::wstring(str.begin(), str.end());
         MessageBoxW(NULL, message.c_str(), L"COM ERROR", MB_OK);
+        log("ERROR: %s", str.c_str());
       }
-    }
-    else {
+    } else {
+      log("ERROR: %s", e.what());
       printf("%s\n", e.what());
       system("pause");
     }
-  } 
-  catch (const std::exception& e) {
+  } catch (const std::exception &e) {
     if (debug_console == "0")
       dprintf(msg<3>());
 
+    log("ERROR: %s", e.what());
     printf("%s\n", e.what());
 
     if (debug_console != "0")
@@ -265,5 +328,6 @@ int main() {
   }
   setStatusErr(ErrorCode::ErrorNotStarted);
   can_exit = TRUE;
+  log("Exiting Retranslator");
   return 0;
 }

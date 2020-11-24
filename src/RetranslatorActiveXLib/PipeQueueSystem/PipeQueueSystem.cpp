@@ -19,6 +19,25 @@ static bool finish = false;
 extern "C" 
 volatile unsigned long created_process_pid;
 
+static bool* logger_enabled;
+static SLogger* logger;
+
+static void _log(const char* format, ...) {
+  if (*logger_enabled) {
+    va_list args;
+    va_start(args, format);
+
+    int buf_size = vsnprintf(nullptr, 0, format, args);
+
+    std::string line;
+    line.resize(buf_size, 0);
+    vsnprintf(line.data(), line.size() + 1, format, args);
+
+    logger->log(line);
+    va_end(args);
+  }
+}
+
 LRESULT CALLBACK CBTProc(_In_ int nCode, _In_ WPARAM wParam,
                          _In_ LPARAM lParam) {
   if (nCode < 0) {
@@ -70,23 +89,30 @@ static void _run() {
     HHOOK h = SetWindowsHookExA(WH_CBT, CBTProc, g_module, 0);
 		
     DWORD proc_id= createProc(cmd);
+    _log("Creating proc from %ls", cmd.c_str());
     if (proc_id == -1)
       continue;
 		HANDLE proc_handle = OpenProcess(PROCESS_ALL_ACCESS, FALSE, proc_id);
     DWORD r = WaitForSingleObject(proc_handle, wait_timeout);
     UnhookWindowsHookEx(h);
     if (r == WAIT_TIMEOUT) {
+      _log("Shutting down proc");
       //char buffer[50] = {};
       //sprintf(buffer, "taskkill /F /PID %d", created_process_pid);
       //system(buffer);
       TerminateProcess(proc_handle, 0x0);
+      WaitForSingleObject(proc_handle, wait_timeout); // wait for termination
     }
+    _log("Proc has finished");
     CloseHandle(proc_handle);
   }
 }
 
-void start_pipe_queue() { 
+void start_pipe_queue(bool& le, SLogger& lg) {
   if (global_queue) stop_pipe_queue();
+
+  logger_enabled = &le;
+  logger = &lg;
 
   global_queue = new SafeQueue<std::wstring>{};
   finish = false;
@@ -102,6 +128,9 @@ void stop_pipe_queue() {
   global_queue = nullptr;
 }
 
-void pipe_push_cmd(std::wstring cmd) { global_queue->Provide(std::move(cmd)); }
+void pipe_push_cmd(std::wstring cmd) { 
+  _log("Pushing to queue %ls", cmd.c_str());
+  global_queue->Provide(std::move(cmd)); 
+}
 
 void pipe_set_timeout(unsigned long ms_timeout) { wait_timeout = ms_timeout; }

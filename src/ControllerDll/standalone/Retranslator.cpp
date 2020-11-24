@@ -10,6 +10,10 @@
 #include <iostream>
 #include <thread>
 
+extern void log(std::string line);
+extern void log(std::string& line);
+extern void log(const char* format, ...);
+
 static void printHex(bytestring_view s) {
   for (uint8_t c : s)
     printf("0x%0.2x ", c);
@@ -102,8 +106,9 @@ void try_open_port(serial::Serial &com, int com_id) {
 
 void Retranslator::start(int ms_timeout) {
   enum class COM_Member { Srcp = 1, Dstp = 2 };
-  dstp.setTimeout(serial::Timeout(0, ms_timeout));
-  srcp.setTimeout(serial::Timeout(0, 50));
+  auto timeout = serial::Timeout(0, ms_timeout);
+  dstp.setTimeout(timeout);
+  srcp.setTimeout(timeout);
   while (run_flag) {
     COM_Member last_read_write = COM_Member::Srcp;
     bool internal_read = false;
@@ -155,10 +160,12 @@ void Retranslator::start(int ms_timeout) {
       int error_n = e.getErrorNumber();
       if (error_n == error_suddenly_port_closed) {
         if (last_read_write == COM_Member::Srcp) {
+          log("ERROR: src_port error. Reopenning...");
           setStatusErr(ErrorCode::ErrorRetranslatorEndPort);
           try_open_port(srcp, static_cast<int>(last_read_write));
         }
         else {          
+          log("ERROR: dst_port error. Reopenning...");
           setStatusErr(ErrorCode::ErrorRetranslatorWeightsPort);
           try_open_port(dstp, static_cast<int>(last_read_write));
         }
@@ -166,6 +173,7 @@ void Retranslator::start(int ms_timeout) {
         std::rethrow_exception(std::current_exception());
       }
     }
+    log("All ports now connected");
     // clear com errors
     setStatusErr(ErrorCode::NoErrors);
   }

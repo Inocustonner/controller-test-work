@@ -7,7 +7,11 @@ set(BoostDateTime "$ENV{BoostBinDir}/date_time/build/msvc-14.2/release/link-stat
 set(ProjLibDir "${CMAKE_SOURCE_DIR}/lib/${CMAKE_BUILD_TYPE}")
 set(LnkLibDirs "${BoostDateTime};${ProjLibDir}")
 
+
+set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL")
+
 # add_subdirectory(Control)
+add_subdirectory(SLogger)
 add_subdirectory(RetranslatorActiveXLib)
 add_subdirectory(ControllerDll)
 add_subdirectory(mmsg)

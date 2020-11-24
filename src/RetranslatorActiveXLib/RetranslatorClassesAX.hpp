@@ -3,6 +3,7 @@
 #include <Retranslator_i.h>
 #include <atomic>
 #include <future>
+#include "SLogger.hpp"
 
 #define IS_EQ_IID(riid1, riid2)                                                \
   ((IsEqualGUID(riid1, IID_IUnknown)) || (IsEqualGUID(riid1, riid2)))
@@ -15,7 +16,6 @@ class RetranslatorAX : public IRetranslator {
 public:
   RetranslatorAX();
   ~RetranslatorAX();
-
   HRESULT __stdcall getWeight(long *res) override;
   HRESULT __stdcall getWeightFixed(long *res) override;
   HRESULT __stdcall getMinimalWeight(long *res) override;
@@ -61,6 +61,10 @@ public:
   ULONG __stdcall AddRef() override;
   ULONG __stdcall Release() override;
 
+  void log(const char* format, ...);
+
+  HRESULT __stdcall enableLogging(_In_ VARIANT* file_path) override;
+
   HRESULT __stdcall start(VARIANT* cmd) override;
   HRESULT __stdcall stop(VARIANT* exe_name) override;
 
@@ -87,6 +91,8 @@ private:
   std::atomic_long m_refCount;
   ITypeInfo *m_typeInfo;
   std::future<bool> m_inet_future;
+  bool logger_enabled = false;
+  SLogger logger;
 };
 //
 //class RetranslatorComPort : public IRetranslatorComPort {

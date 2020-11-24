@@ -14,6 +14,7 @@
 #include <RetranslatorDefs.hpp>
 
 #include "fixer.h"
+#include <SLogger.hpp>
 
 #define IMPORT_DLL __declspec(dllimport)
 
@@ -29,7 +30,10 @@ IMPORT_DLL void __stdcall setStatusAuth(bool auth);
 IMPORT_DLL double __stdcall getResetThrKoef();
 }
 
+extern void log(const char* format, ...);
+
 void onSetCorr(long corr) {
+  log("SetCorr %d", corr);
   if (-100 < corr && corr < 100) {
     const double corr_koef = corr / 100.0;
     state.corr = [&min_w = state.min_weight,
@@ -44,6 +48,7 @@ void onSetCorr(long corr) {
 }
 
 void onSetMinWeight(long new_min_w) {
+  log("SetMinWeight %d", new_min_w);
   state.min_weight = new_min_w;
   state.authorized = true;
 
@@ -51,11 +56,13 @@ void onSetMinWeight(long new_min_w) {
 }
 
 void onSetResetThr(long) {
+  log("SetResetThr");
   reset_thr_koef = getResetThrKoef();
   state.reset_thr = static_cast<comptype>(state.min_weight / reset_thr_koef);
 }
 
 void onClearAuth(long) {
+  log("ClearAuth");
   state.authorized = false;
 }
 
@@ -98,7 +105,7 @@ comptype fix(const comptype p1, const bool is_stable) {
   if (get_log_lvl() > 0) {
     printf("Authorization: %s\n", state.authorized ? "true" : "false");
     printf("Reset thr: %d\n", state.reset_thr);
-  }
+  }  
   state.p0 = p1;
 
   ret_value = ret_value / rounding * rounding ;
@@ -114,6 +121,7 @@ comptype fix(const comptype p1, const bool is_stable) {
 
 bool init_fixer(const inipp::Ini<char> &ini) {
   initDll();
+  log("Setting hooks");
   setEventHook(SetMinimalWeight, onSetMinWeight);
   setEventHook(SetCorr, onSetCorr);
   setEventHook(ClearAuth, onClearAuth);
@@ -122,6 +130,7 @@ bool init_fixer(const inipp::Ini<char> &ini) {
   try {
     init_settings(ini);
   } catch (const ctrl::error &e) {
+    log("ERROR: %s", e.what());
     printf(e.what());
     if (get_log_lvl() > 1)
       std::system("pause");
