@@ -2,7 +2,8 @@
 
 enum EventType
 {
-  SetMinimalWeight = 0,
+  SetMaximalWeight = 0,
+  SetMinimalWeight,
   SetCorr,
   SetNull,
   SetResetThr,

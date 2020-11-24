@@ -6,8 +6,11 @@
 
 using comptype = int;
 
+#define MAX_WEIGHT_DEFAULT 999999
+
 struct State
 {
+	comptype max_weight = MAX_WEIGHT_DEFAULT;
 	comptype min_weight = 0; // defaults to reset_thr
 	std::function<comptype(comptype)> corr;
 

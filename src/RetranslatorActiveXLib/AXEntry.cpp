@@ -16,12 +16,15 @@ std::atomic_long g_objsInUse = 0;
 #define STATE_0 (ErrorNotStarted << 2)
 
 #pragma data_seg(".data_shared")
+
 extern "C"
 {
   SHARED_VAR long g_weightRaw = 0;
   SHARED_VAR long g_weightFixed = 0;
   SHARED_VAR Status g_status = Status{ .f_long = STATE_0 };
 
+  constexpr long default_max_weight = 999999;
+  SHARED_VAR long g_maxWeight = default_max_weight;
   SHARED_VAR long g_minWeight = 0;
   SHARED_VAR long g_corr = 0;
 

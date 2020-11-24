@@ -28,7 +28,7 @@ EXTERN_SHARED long g_weightFixed;
 EXTERN_SHARED Status g_status;
 EXTERN_SHARED long g_minWeight;
 EXTERN_SHARED long g_corr;
-
+EXTERN_SHARED long g_maxWeight;
 EXTERN_SHARED double g_reset_thr;
 
 RetranslatorAX::RetranslatorAX()
@@ -85,6 +85,12 @@ HRESULT __stdcall RetranslatorAX::getMinimalWeight(long *res) {
 HRESULT __stdcall RetranslatorAX::getCorr(long *res) {
   *res = InterlockedRead(g_corr);
   return S_OK;
+}
+
+HRESULT __stdcall RetranslatorAX::setMaximalWeight(long val) {
+  InterlockedExchange(&g_maxWeight, val);
+  fireEvent(SetMinimalWeight);
+  return E_NOTIMPL;
 }
 
 HRESULT __stdcall RetranslatorAX::setMinimalWeight(long val) {

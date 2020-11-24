@@ -21,11 +21,12 @@ library RetranslatorLib
   ]
   interface IRetranslator : IDispatch 
   {
-    [id(20)] HRESULT getWeight([out, retval] long *res);
-    [id(22)] HRESULT getWeightFixed([out, retval] long *res);
-    [id(24)] HRESULT getMinimalWeight([out, retval] long *res);
-    [id(25)] HRESULT getCorr([out, retval] long *res);
+    [id(10)] HRESULT getWeight([out, retval] long *res);
+    [id(12)] HRESULT getWeightFixed([out, retval] long *res);
+    [id(14)] HRESULT getMinimalWeight([out, retval] long *res);
+    [id(15)] HRESULT getCorr([out, retval] long *res);
 
+    [id(25)] HRESULT setMaximalWeight([in] long val);
     [id(26)] HRESULT setMinimalWeight([in] long val);
     [id(27)] HRESULT setCorr([in] long corr);
     [id(28)] HRESULT setNull();

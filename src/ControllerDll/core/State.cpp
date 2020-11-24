@@ -13,6 +13,7 @@ void reset_state()
 	state.p0 = 0;
 	state.p0s = 0;
 	state.min_weight = reset_thr;
+	state.max_weight = MAX_WEIGHT_DEFAULT;
 	state.authorized = false;
 	state.passed_upper_gate = false;
 	state.reset_thr = default_min_weight / reset_thr_koef;

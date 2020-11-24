@@ -7,12 +7,14 @@
 
 #define InterlockedRead(var) InterlockedExchangeAdd(&(var), 0)
 
+extern "C" volatile long g_maxWeight;
 extern "C" volatile long g_minWeight;
 extern "C" volatile long g_corr;
 extern "C" volatile double g_reset_thr;
 
 static void set_def_(long) {}
-static SetHook *onSetMinimalWeightHook = set_def_;
+static SetHook* onSetMaximalWeightHook = set_def_;
+static SetHook* onSetMinimalWeightHook = set_def_;
 static SetHook *onSetCorrHook = set_def_;
 static SetHook* onSetNullHook = set_def_;
 static SetHook* onClearAuthHook = set_def_;
@@ -29,6 +31,11 @@ void fireEvent(EventType event) { SetEvent(events[event]); }
 
 void setEventHook(EventType event, SetHook *onSet) {
   switch (event) {
+
+  case SetMaximalWeight: 
+    onSetMaximalWeightHook = onSet;
+    break;
+
   case SetMinimalWeight:
     onSetMinimalWeightHook = onSet;
     break;
@@ -65,6 +72,12 @@ static void listenFunc() {
         WaitForMultipleObjects(EventsCnt, events, WAIT_ONE, INFINITE));
     switch (event_t) {
 
+    case SetMaximalWeight: {
+      onSetMaximalWeightHook(InterlockedRead(g_maxWeight));
+      ResetEvent(events[event_t]);
+      break;
+    }
+
     case SetMinimalWeight: {
       onSetMinimalWeightHook(InterlockedRead(g_minWeight));
       ResetEvent(events[event_t]);
@@ -95,6 +108,7 @@ static void listenFunc() {
 }
 
 void initListener() {
+  events[SetMaximalWeight] = createEvent("SetMaximalWeightEvent");
   events[SetMinimalWeight] = createEvent("SetMinimalWeightEvent");
   events[SetCorr] = createEvent("SetCorr");
   events[SetNull] = createEvent("SetNull");

@@ -21,6 +21,7 @@ public:
   HRESULT __stdcall getMinimalWeight(long *res) override;
   HRESULT __stdcall getCorr(long *res) override;
 
+  HRESULT __stdcall setMaximalWeight(_In_ long val) override;
   HRESULT __stdcall setMinimalWeight(long val) override;
   HRESULT __stdcall setCorr(long val) override;
   HRESULT __stdcall setNull() override;

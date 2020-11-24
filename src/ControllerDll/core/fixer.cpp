@@ -55,6 +55,11 @@ void onSetMinWeight(long new_min_w) {
   state.reset_thr = static_cast<comptype>(state.min_weight / reset_thr_koef);
 }
 
+void onSetMaxWeight(long new_max_w) {
+  log("SetMaxWeight %d", new_max_w);
+  state.max_weight = new_max_w;
+}
+
 void onSetResetThr(long) {
   log("SetResetThr");
   reset_thr_koef = getResetThrKoef();
@@ -99,8 +104,10 @@ comptype fix(const comptype p1, const bool is_stable) {
   if (state.authorized) {
     if (p1 < state.reset_thr)
       phase0(p1);
-    else if (p1 >= state.min_weight)
+    else if (p1 >= state.min_weight && p1 < state.max_weight)
       ret_value = phase1(p1, is_stable);
+    else if (p1 < state.max_weight)
+      ret_value = state.max_weight - p1 % 100;
   } 
   if (get_log_lvl() > 0) {
     printf("Authorization: %s\n", state.authorized ? "true" : "false");
@@ -122,6 +129,7 @@ comptype fix(const comptype p1, const bool is_stable) {
 bool init_fixer(const inipp::Ini<char> &ini) {
   initDll();
   log("Setting hooks");
+  setEventHook(SetMaximalWeight, onSetMaxWeight);
   setEventHook(SetMinimalWeight, onSetMinWeight);
   setEventHook(SetCorr, onSetCorr);
   setEventHook(ClearAuth, onClearAuth);
