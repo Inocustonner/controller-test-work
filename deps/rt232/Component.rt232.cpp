@@ -1,4 +1,4 @@
-#pragma comment(lib, "OneCore.lib")
+// #pragma comment(lib, "OneCore.lib")
 
 #include "Component.rt232.hpp"
 #include "Component_i.c"
@@ -103,8 +103,11 @@ bool Rt232::configure_port() {
 
 bool Rt232::ensure_open_port(bool force, int max_try_cnt) {
   int i = 0;
+  char comport_name[16] = {};
+  sprintf_s(comport_name, "\\\\.\\COM%d", m_port_n);
   do {
-    h_com = OpenCommPort(m_port_n, GENERIC_WRITE | GENERIC_READ, NULL);
+    // h_com = OpenCommPort(m_port_n, GENERIC_WRITE | GENERIC_READ, NULL);
+    h_com = CreateFileA(comport_name, GENERIC_READ | GENERIC_WRITE, 0, NULL, OPEN_EXISTING, 0, NULL);
     if (h_com != INVALID_HANDLE_VALUE) {
       if (configure_port()) {
         //read_open_errors_cnt = 0;
