@@ -24,8 +24,8 @@ enum Rt232Methods {};
 
 constexpr char eof_char = '\r'; // '\n'?
 
-static IAsyncEvent* m_async_interface;
-static IUnknown* m_connection;
+static IAsyncEvent *m_async_interface;
+static IUnknown *m_connection;
 void Rt232::create_external_event(std::wstring &buffer) {
   if (m_async_interface) {
 
@@ -39,7 +39,7 @@ void Rt232::create_external_event(std::wstring &buffer) {
   }
 }
 
-DWORD __stdcall Rt232::run_reader(Rt232* this_) {
+DWORD __stdcall Rt232::run_reader(Rt232 *this_) {
   std::wstring buffer;
 
   while (!this_->stop_thread) {
@@ -65,7 +65,7 @@ DWORD __stdcall Rt232::run_reader(Rt232* this_) {
       } else
         buffer.push_back((wchar_t)c);
     }
-    //read_open_errors_cnt = 0;
+    // read_open_errors_cnt = 0;
   }
   return 0;
 }
@@ -107,16 +107,18 @@ bool Rt232::ensure_open_port(bool force, int max_try_cnt) {
   sprintf_s(comport_name, "\\\\.\\COM%d", m_port_n);
   do {
     // h_com = OpenCommPort(m_port_n, GENERIC_WRITE | GENERIC_READ, NULL);
-    h_com = CreateFileA(comport_name, GENERIC_READ | GENERIC_WRITE, 0, NULL, OPEN_EXISTING, 0, NULL);
+    h_com = CreateFileA(comport_name, GENERIC_READ | GENERIC_WRITE, 0, NULL,
+                        OPEN_EXISTING, 0, NULL);
     if (h_com != INVALID_HANDLE_VALUE) {
       if (configure_port()) {
-        //read_open_errors_cnt = 0;
-        return true;        
+        // read_open_errors_cnt = 0;
+        return true;
       }
     }
     read_open_errors_cnt += 1;
 
-    if (max_try_cnt == ++i) break;
+    if (max_try_cnt == ++i)
+      break;
 
     std::this_thread::sleep_for(std::chrono::seconds(1));
   } while (force);
@@ -125,14 +127,16 @@ bool Rt232::ensure_open_port(bool force, int max_try_cnt) {
 
 RT232_COM_METHOD openPort(unsigned long port_n, long *success) {
   // stop previous thread
-  //closePort();
+  // closePort();
 
   m_port_n = port_n;
   if (ensure_open_port(false)) {
     *success = 0;
     stop_thread = false;
     // reader_thread = std::thread(&Rt232::run_reader, this);
-    reader_thread = CreateThread(NULL, NULL, (LPTHREAD_START_ROUTINE)&Rt232::run_reader, this, NULL, NULL);
+    reader_thread =
+        CreateThread(NULL, NULL, (LPTHREAD_START_ROUTINE)&Rt232::run_reader,
+                     this, NULL, NULL);
   } else {
     *success = 1;
   }
@@ -143,7 +147,10 @@ RT232_COM_METHOD closePort() {
   if (h_com != NULL) {
     stop_thread = true;
     if (reader_thread != NULL && reader_thread != INVALID_HANDLE_VALUE) {
-      WaitForSingleObject(reader_thread, INFINITE);
+      constexpr DWORD wait_ms = 2000;
+      if (WaitForSingleObject(reader_thread, wait_ms) == WAIT_TIMEOUT) {
+        TerminateThread(reader_thread, 0);
+      }
       CloseHandle(reader_thread);
     }
   }
@@ -153,9 +160,9 @@ RT232_COM_METHOD closePort() {
   return S_OK;
 }
 
-RT232_COM_METHOD getErrorsCnt(VARIANT* errors_cnt) {
+RT232_COM_METHOD getErrorsCnt(VARIANT *errors_cnt) {
   errors_cnt->vt = VT_I4;
-  V_I4(errors_cnt) = read_open_errors_cnt;    
+  V_I4(errors_cnt) = read_open_errors_cnt;
   return S_OK;
 }
 
