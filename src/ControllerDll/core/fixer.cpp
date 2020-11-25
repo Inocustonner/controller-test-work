@@ -106,7 +106,7 @@ comptype fix(const comptype p1, const bool is_stable) {
       phase0(p1);
     else if (p1 >= state.min_weight && p1 < state.max_weight)
       ret_value = phase1(p1, is_stable);
-    else if (p1 < state.max_weight)
+    else if (p1 >= state.max_weight)
       ret_value = state.max_weight - p1 % 100;
   } 
   if (get_log_lvl() > 0) {

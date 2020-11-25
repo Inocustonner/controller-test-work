@@ -88,8 +88,11 @@ HRESULT __stdcall RetranslatorAX::getCorr(long *res) {
 }
 
 HRESULT __stdcall RetranslatorAX::setMaximalWeight(long val) {
-  InterlockedExchange(&g_maxWeight, val);
-  fireEvent(SetMinimalWeight);
+  if (val == NO_CORR_WEIGHT)
+    InterlockedExchange(&g_maxWeight, NO_CORR_WEIGHT_VALUE);
+  else
+    InterlockedExchange(&g_maxWeight, val);
+  fireEvent(SetMaximalWeight);
   return E_NOTIMPL;
 }
 
