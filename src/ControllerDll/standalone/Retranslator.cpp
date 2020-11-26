@@ -172,8 +172,8 @@ void Retranslator::start(int ms_timeout) {
       } else {
         std::rethrow_exception(std::current_exception());
       }
+      log("All ports now connected");
     }
-    log("All ports now connected");
     // clear com errors
     setStatusErr(ErrorCode::NoErrors);
   }

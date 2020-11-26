@@ -29,4 +29,5 @@ void SLogger::log(std::string to_write) {
   std::string log_line = prefix_buf;
   log_line += to_write + "\n\n";
   log_stm << log_line;
+  log_stm.flush();
 }

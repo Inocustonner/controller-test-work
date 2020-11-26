@@ -40,7 +40,7 @@ IMPORT_DLL void setEventHook(EventType event, SetHook *onSet);
 }
 
 static SLogger logger;
-static bool enable_txt_logging = false;
+bool enable_txt_logging = false;
 
 
 BOOL WINAPI CtrlHandler(DWORD signal) {
@@ -53,6 +53,22 @@ BOOL WINAPI CtrlHandler(DWORD signal) {
     return TRUE;
   } else
     return FALSE;
+}
+
+void log(const char* format, ...) {
+  if (enable_txt_logging) {
+    va_list args;
+    va_start(args, format);
+
+    int buf_size = vsnprintf(nullptr, 0, format, args);
+
+    std::string line;
+    line.resize(buf_size, 0);
+    vsnprintf(line.data(), line.size() + 1, format, args);
+
+    logger.log(line);
+    va_end(args);
+  }
 }
 
 static void setNullHook(long) {
@@ -138,16 +154,6 @@ static void modify_resp(bytestring &bs) {
       printf("Extracted weight: %i[%s]\n", weight,
              stable ? "Stable" : "Unstable");
       printf("Fixed: %i\n\n", fixed);
-      
-      constexpr int last_stable_default = -1000;
-      static int last_stable_fixed = last_stable_default;
-      if (stable && last_stable_fixed == last_stable_default) {
-        last_stable_fixed = fixed;
-        log("Fixed %d", last_stable_fixed);
-      } else if (weight < 1000) {
-        last_stable_fixed = last_stable_default;
-      }
-
 
       // bcs weights use 6 bytes as with decimal in each, 2nd byte reserved for
       // '-'
