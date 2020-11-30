@@ -9,9 +9,11 @@ enum EventType
   SetResetThr,
   ClearAuth,
 	
-  EventsCnt
+  //EventsCnt
 };
 
 template <typename... InputArgs>
 using HookF = void(InputArgs...);
-using SetHook = HookF<long>;
+
+using HookSet = void(*)(long);
+using HookNotify = void(*)();

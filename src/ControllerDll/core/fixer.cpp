@@ -20,7 +20,7 @@
 
 extern "C" {
 IMPORT_DLL void initDll();
-IMPORT_DLL void setEventHook(EventType event, SetHook *onSet);
+IMPORT_DLL void setEventHook(EventType event, void *onSet);
 IMPORT_DLL void fireEvent(EventType event);
 IMPORT_DLL void __stdcall setWeight(long weight);
 IMPORT_DLL void __stdcall setWeightFixed(long weight);
@@ -61,13 +61,13 @@ void onSetMaxWeight(long new_max_w) {
   state.max_weight = new_max_w;
 }
 
-void onSetResetThr(long) {
+void onSetResetThr() {
   reset_thr_koef = getResetThrKoef();
   state.reset_thr = static_cast<comptype>(state.min_weight / reset_thr_koef);
   log("SetResetThr %d", state.reset_thr);
 }
 
-void onClearAuth(long) {
+void onClearAuth() {
   log("ClearAuth");
   reset_state();
 }

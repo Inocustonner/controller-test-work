@@ -36,7 +36,7 @@ static bool add_set_null_cmd = false;
 #define IMPORT_DLL __declspec(dllimport)
 extern "C" {
 IMPORT_DLL void __stdcall setStatusErr(long status);
-IMPORT_DLL void setEventHook(EventType event, SetHook *onSet);
+IMPORT_DLL void setEventHook(EventType event, void *onSet);
 }
 
 static SLogger logger;
@@ -71,7 +71,7 @@ void log(const char* format, ...) {
   }
 }
 
-static void setNullHook(long) {
+static void setNullHook() {
   log("SetNullHook fired");
   add_set_null_cmd = true;
 }

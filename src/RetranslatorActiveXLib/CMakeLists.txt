@@ -17,6 +17,7 @@ add_library(retranslatorAX SHARED AXEntry.cpp
                           )
                           
 target_link_libraries(retranslatorAX PUBLIC RetranslatorIDL slogger)
+target_include_directories(retranslatorAX PRIVATE ${ProjI})
 set_target_properties(retranslatorAX
    PROPERTIES
    ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_ARCHIVE_OUTPUT_DIRECTORY}/retranslatorAX"
