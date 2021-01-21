@@ -27,7 +27,7 @@ void SLogger::log(std::string to_write) {
 
   std::strftime(prefix_buf, sizeof(prefix_buf), "[%d/%m/%Y-%H:%M:%S] ", &t);
   std::string log_line = prefix_buf;
-  log_line += to_write + "\n\n";
+  log_line += to_write + "\n";
   log_stm << log_line;
   log_stm.flush();
 }
