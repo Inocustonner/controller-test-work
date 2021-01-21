@@ -89,21 +89,21 @@ static void _run() {
     HHOOK h = SetWindowsHookExA(WH_CBT, CBTProc, g_module, 0);
     _log("Attempting to start proc from %ls", cmd.c_str());
     DWORD proc_id= createProc(cmd);
-    _log("Started proc id(%d) from %ls", proc_id, cmd.c_str());
+    _log("id(%d) Started proc from %ls", proc_id, cmd.c_str());
     if (proc_id == -1)
       continue;
 		HANDLE proc_handle = OpenProcess(PROCESS_ALL_ACCESS, FALSE, proc_id);
     DWORD r = WaitForSingleObject(proc_handle, wait_timeout);
     UnhookWindowsHookEx(h);
     if (r == WAIT_TIMEOUT) {
-      _log("Manually shutting down proc %d", proc_id);
+      _log("id(%d) Manually shutting down proc ", proc_id);
       //char buffer[50] = {};
       //sprintf(buffer, "taskkill /F /PID %d", created_process_pid);
       //system(buffer);
       TerminateProcess(proc_handle, 0x0);
       WaitForSingleObject(proc_handle, wait_timeout); // wait for termination
     }
-    _log("Proc has finished %d", proc_id);
+    _log("id(%d) proc has finished", proc_id);
     CloseHandle(proc_handle);
   }
 }
