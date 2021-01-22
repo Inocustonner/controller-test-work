@@ -42,18 +42,21 @@ void Rt232::create_external_event(std::wstring &buffer) {
 DWORD __stdcall Rt232::run_reader(Rt232 *this_) {
   std::wstring buffer;
 
+  bool prev_stop_thread = this_->stop_thread;
+  this_->log("Stop thread flag = %s", this_->stop_thread ? "TRUE" : "FALSE");
   while (!this_->stop_thread) {
     char c = 0;
     DWORD read = 0;
     if (!ReadFile(this_->h_com, &c, 1, &read, NULL)) {
       DWORD err = GetLastError();
+      this_->log("Port error %u(GetLastError code)", err);
       DWORD clear_flags =
           CE_BREAK | CE_FRAME | CE_OVERRUN | CE_RXOVER | CE_RXPARITY;
       ClearCommError(this_->h_com, &clear_flags, NULL);
       if (err == 0x16 || err == 0x6) {
         CloseHandle(this_->h_com);
         this_->h_com = INVALID_HANDLE_VALUE;
-
+        this_->log("reopenning port COM%d", this_->m_port_n);
         this_->ensure_open_port(false);
       }
       this_->read_open_errors_cnt += 1;
@@ -64,6 +67,9 @@ DWORD __stdcall Rt232::run_reader(Rt232 *this_) {
         buffer.clear();
       } else
         buffer.push_back((wchar_t)c);
+    }
+    if (this_->stop_thread != prev_stop_thread) {
+      this_->log("Stop thread flag changed to %s", this_->stop_thread ? "TRUE" : "FALSE");
     }
     // read_open_errors_cnt = 0;
   }
@@ -106,6 +112,7 @@ bool Rt232::ensure_open_port(bool force, int max_try_cnt) {
   char comport_name[16] = {};
   sprintf_s(comport_name, "\\\\.\\COM%d", m_port_n);
   do {
+    log("openning attempt #%d", i + 1);
     // h_com = OpenCommPort(m_port_n, GENERIC_WRITE | GENERIC_READ, NULL);
     h_com = CreateFileA(comport_name, GENERIC_READ | GENERIC_WRITE, 0, NULL,
                         OPEN_EXISTING, 0, NULL);
@@ -130,13 +137,16 @@ RT232_COM_METHOD openPort(unsigned long port_n, long *success) {
   // closePort();
 
   m_port_n = port_n;
+  log("Openning port COM%u", m_port_n);
   if (ensure_open_port(false)) {
+    log("Port has been opened");
     *success = 0;
     stop_thread = false;
     // reader_thread = std::thread(&Rt232::run_reader, this);
     reader_thread =
         CreateThread(NULL, NULL, (LPTHREAD_START_ROUTINE)&Rt232::run_reader,
                      this, NULL, NULL);
+    log("Starting thread id(%p)", reader_thread);
   } else {
     *success = 1;
   }
@@ -145,18 +155,23 @@ RT232_COM_METHOD openPort(unsigned long port_n, long *success) {
 
 RT232_COM_METHOD closePort() {
   if (h_com != NULL) {
+    log("Closing port");
     stop_thread = true;
     if (reader_thread != NULL && reader_thread != INVALID_HANDLE_VALUE) {
       constexpr DWORD wait_ms = 2000;
+      log("Waiting for thread to stop id(%p)", reader_thread);
       if (WaitForSingleObject(reader_thread, wait_ms) == WAIT_TIMEOUT) {
+        log("Terminating thread id(%p)", reader_thread);
         TerminateThread(reader_thread, 0);
       }
       CloseHandle(reader_thread);
+      log("Thread has been stopped");
     }
   }
   if (h_com != NULL)
     CloseHandle(h_com);
   h_com = NULL;
+  log("Port has been closed");
   return S_OK;
 }
 
@@ -164,6 +179,28 @@ RT232_COM_METHOD getErrorsCnt(VARIANT *errors_cnt) {
   errors_cnt->vt = VT_I4;
   V_I4(errors_cnt) = read_open_errors_cnt;
   return S_OK;
+}
+
+RT232_COM_METHOD enableLogging(VARIANT* log_file_path) {
+  logging = true;
+  logger = SLogger{ V_BSTR(log_file_path) };
+  return S_OK;
+}
+
+void Rt232::log(const char* format, ...) {
+  if (logging) {
+    va_list args;
+    va_start(args, format);
+
+    int buf_size = vsnprintf(nullptr, 0, format, args);
+
+    std::string line;
+    line.resize(buf_size, 0);
+    vsnprintf(line.data(), line.size() + 1, format, args);
+
+    logger.log(line);
+    va_end(args);
+  }
 }
 
 RT232_COM_METHOD Init(IDispatch *pConnection) {

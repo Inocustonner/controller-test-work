@@ -15,5 +15,5 @@ copy_batch.bat
 copy.bat
 !.gitignore
 **/.*
-deps/rt232/Release/
-deps/rt232/Debug/
+deps/rt232/**/Release/
+deps/rt232/**/Debug/

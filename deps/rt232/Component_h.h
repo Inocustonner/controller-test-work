@@ -98,6 +98,9 @@ EXTERN_C const IID IID_IRt232;
         virtual /* [id] */ HRESULT STDMETHODCALLTYPE getErrorsCnt( 
             /* [retval][out] */ VARIANT *error_cnt) = 0;
         
+        virtual /* [id] */ HRESULT STDMETHODCALLTYPE enableLogging( 
+            /* [in] */ VARIANT *log_file_path) = 0;
+        
     };
     
     
@@ -168,6 +171,10 @@ EXTERN_C const IID IID_IRt232;
             IRt232 * This,
             /* [retval][out] */ VARIANT *error_cnt);
         
+        /* [id] */ HRESULT ( STDMETHODCALLTYPE *enableLogging )( 
+            IRt232 * This,
+            /* [in] */ VARIANT *log_file_path);
+        
         END_INTERFACE
     } IRt232Vtbl;
 
@@ -212,6 +219,9 @@ EXTERN_C const IID IID_IRt232;
 
 #define IRt232_getErrorsCnt(This,error_cnt)	\
     ( (This)->lpVtbl -> getErrorsCnt(This,error_cnt) ) 
+
+#define IRt232_enableLogging(This,log_file_path)	\
+    ( (This)->lpVtbl -> enableLogging(This,log_file_path) ) 
 
 #endif /* COBJMACROS */
 

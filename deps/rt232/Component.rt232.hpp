@@ -1,4 +1,6 @@
 #pragma once
+#include <SLogger.hpp>
+
 #include "Component_h.h"
 #include "addin_h.h"
 
@@ -27,11 +29,14 @@ public:
   bool configure_port();
   bool ensure_open_port(bool force = true, int max_try_cnt = 0);
 
+
   COM_OVERRIDE(openPort(unsigned long port_n, long *success));
   COM_OVERRIDE(closePort());
 
   COM_OVERRIDE(getErrorsCnt(VARIANT *errors_cnt));
 
+  COM_OVERRIDE(enableLogging(VARIANT* log_file_path));
+  void log(const char* format, ...);
 
   COM_OVERRIDE(Init(IDispatch *pConnection));
   COM_OVERRIDE(Done(void));
@@ -104,4 +109,7 @@ private:
   HANDLE reader_thread = NULL;
 
   unsigned long read_open_errors_cnt = 0;
+
+  bool logging = false;
+  SLogger logger;
 };

@@ -20,6 +20,7 @@ library Component {
 		[id(0)] HRESULT openPort([in] unsigned long port_n, [out, retval] long *success);
 		[id(1)] HRESULT closePort();
 		[id(2)] HRESULT getErrorsCnt([out, retval] VARIANT* error_cnt);
+		[id(3)] HRESULT enableLogging([in] VARIANT* log_file_path);
 	};
 
 	[
