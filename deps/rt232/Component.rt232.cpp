@@ -155,10 +155,10 @@ RT232_COM_METHOD openPort(unsigned long port_n, long *success) {
 
 RT232_COM_METHOD closePort() {
   if (h_com != NULL) {
-    log("Closing port");
+    log("Closing port COM%d", this->m_port_n);
     stop_thread = true;
     if (reader_thread != NULL && reader_thread != INVALID_HANDLE_VALUE) {
-      constexpr DWORD wait_ms = 2000;
+      constexpr DWORD wait_ms = 5000;
       log("Waiting for thread to stop id(%p)", reader_thread);
       if (WaitForSingleObject(reader_thread, wait_ms) == WAIT_TIMEOUT) {
         log("Terminating thread id(%p)", reader_thread);
@@ -168,10 +168,11 @@ RT232_COM_METHOD closePort() {
       log("Thread has been stopped");
     }
   }
-  if (h_com != NULL)
+  if (h_com != NULL) {
     CloseHandle(h_com);
-  h_com = NULL;
-  log("Port has been closed");
+    log("Port has been closed");
+    h_com = NULL;
+  }
   return S_OK;
 }
 
