@@ -158,7 +158,7 @@ RT232_COM_METHOD closePort() {
     log("Closing port COM%d", this->m_port_n);
     stop_thread = true;
     if (reader_thread != NULL && reader_thread != INVALID_HANDLE_VALUE) {
-      constexpr DWORD wait_ms = 2000;
+      constexpr DWORD wait_ms = 5000;
       log("Waiting for thread to stop id(%p)", reader_thread);
       if (WaitForSingleObject(reader_thread, wait_ms) == WAIT_TIMEOUT) {
         log("Terminating thread id(%p)", reader_thread);
