@@ -91,7 +91,6 @@ public:
 private:
   std::atomic_long m_refCount;
   ITypeInfo *m_typeInfo;
-  std::future<bool> m_inet_future;
   bool logger_enabled = false;
   SLogger logger;
 };
